@@ -9,8 +9,12 @@
 /coverage
 
 # next.js
-/.next/
-/out/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+frontend/coverage/
+frontend/.vercel/
 
 # production
 /build
@@ -25,8 +29,10 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env*.local
+frontend/.env.local
+frontend/.env*.local
 .env
+*.env.*
 
 # vercel
 .vercel
