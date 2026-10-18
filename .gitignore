@@ -15,6 +15,7 @@ frontend/out/
 frontend/.turbo/
 frontend/coverage/
 frontend/.vercel/
+frontend/outputs.json
 
 # production
 /build
@@ -40,3 +41,11 @@ frontend/.env*.local
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# AWS CDK関連
+infra/cdk.out/
+infra/node_modules/
+infra/.cdk.staging/
+
+# Lambdaレイヤーの外部ライブラリフォルダをGitの管理から除外する
+backend/layers/common_layer/python/

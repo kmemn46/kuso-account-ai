@@ -11,8 +11,11 @@ class DecimalEncoder(json.JSONEncoder):
         return super(DecimalEncoder, self).default(o)
 
 dynamodb = boto3.resource('dynamodb')
-TABLE_NAME = os.environ.get('TABEL_NAME', 'Your-table-name')
+TABLE_NAME = os.environ['TABLE_NAME']
 table = dynamodb.Table(TABLE_NAME)
+
+# CloudFrontのURLを取得
+CLOUDFRONT_URL = os.environ.get("CLOUDFRONT_URL", "*")
 
 def lambda_handler(event, context):
     try:
@@ -57,7 +60,7 @@ def lambda_handler(event, context):
             'statusCode': 200,
             'headers': {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
+                'Access-Control-Allow-Origin': CLOUDFRONT_URL
             },
             'body': json.dumps({
                 'message': f'{target_month}の決算集計完了！超絶黒字経営だよ！✨',

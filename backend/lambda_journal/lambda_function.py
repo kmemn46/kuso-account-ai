@@ -16,7 +16,7 @@ class JournalEntry(BaseModel):
 
 # AWSクライアントとLangChainの初期化
 dynamodb = boto3.resource('dynamodb')
-TABLE_NAME = os.environ.get('TABEL_NAME', 'Your-table-name')
+TABLE_NAME = os.environ['TABLE_NAME']
 table = dynamodb.Table(TABLE_NAME)
 
 llm = ChatBedrock(
@@ -24,6 +24,9 @@ llm = ChatBedrock(
     model_kwargs = {"temperature": 0.7}
 )
 structured_llm = llm.with_structured_output(JournalEntry)
+
+# CloudFrontのURLを取得
+CLOUDFRONT_URL = os.environ.get("CLOUDFRONT_URL", "*")
 
 # Lambdaのエントリーポイント (メイン処理)
 def lambda_handler(event, context):
@@ -71,7 +74,9 @@ def lambda_handler(event, context):
             'statusCode': 200,
             'headers': {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'  # CORS対策
+                'Access-Control-Allow-Origin': CLOUDFRONT_URL,  # CORS対策
+                "Access-Control-Allow-Headers": "Content-Type,Authorization",
+                "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
             },
             'body': json.dumps({
                 'message': '仕訳データの生成と保存が完了したよ！✨',
