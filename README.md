@@ -41,6 +41,7 @@
 | **Database** | Amazon DynamoDB |
 | **AI / LLM** | Amazon Bedrock (Claude Haiku 4.5), LangChain (`with_structured_output` / Pydantic) |
 | **Infrastructure** | Amazon S3, Amazon CloudFront (OAC), IAM |
+| **Infrastructure as Code** | AWS CDK (TypeScript) |
 
 ---
 
