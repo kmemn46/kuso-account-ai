@@ -41,6 +41,10 @@
 
 ![Architecture Diagram](./docs/architecture.png)
 
+---
+
+### 🛠️ 使用技術 (Tech Stack)
+
 <!-- ✨ 主要技術スタックのバッジ ✨ -->
 ![Next.js](https://img.shields.io/badge/Next.js_16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
@@ -50,9 +54,6 @@
 ![Amazon DynamoDB](https://img.shields.io/badge/Amazon_DynamoDB-4053D6?style=for-the-badge&logo=amazondynamodb&logoColor=white)
 ![Amazon CloudFront](https://img.shields.io/badge/Amazon_CloudFront-8C4FFF?style=for-the-badge&logo=amazon&logoColor=white)
 
----
-
-### 🛠️ 使用技術 (Tech Stack)
 | カテゴリ | 技術スタック |
 | :--- | :--- |
 | **Frontend** | Next.js (App Router / Static Export), TypeScript, Tailwind CSS v4, Turbopack |
