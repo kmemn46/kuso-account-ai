@@ -1,6 +1,7 @@
 *.js
 !jest.config.js
 !generate-env.js
+!build-layer.js
 *.d.ts
 node_modules
 
