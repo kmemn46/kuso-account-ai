@@ -67,12 +67,12 @@
 ## 💡 技術的な工夫と設計思想 (Key Features & Engineering)
 
 ### 1. LangChain による型安全な AI 構造化出力
-プロンプトのみのフォーマット指定による「出力の揺らぎ・フォーマット崩れ」を防止するため、LangChain の `with_structured_output` および Pydantic スキーマを導入。LLM からのレスポンスを厳密な JSON 構造体に強制することで、後続の DynamoDB 登録および画面描画における例外エラー率を大幅に低減させました。
+プロンプトのみのフォーマット指定による「出力の揺らぎ・フォーマット崩れ」を防止するため、LangChain の `with_structured_output` および Pydantic スキーマを導入。LLM からのレスポンスを厳密な JSON 構造体に強制することで、後続の DynamoDB 登録および画面描画における例外エラー率を大幅に低減。
 
 ### 2. コスト・防御意識を両立したインフラ設計
 - **S3 + CloudFront (OAC):** S3 バケットのパブリックアクセスを完全拒否し、CloudFront OAC 経由のみに最小権限アクセスを限定。
 - **CORS ＆ Throttling 制限:** API Gateway 側で Access-Control-Allow-Origin を本番 CloudFront ドメインのみに絞り込み、不要な外部直叩きによるクラウドコスト肥大化リスクをシャットアウト。
-- **AWS CDKによるインフラ構築:** TYpeScriptによるIaCでアプリエンジニアでもインフラ構築が可能。サーバレス構成でコストはほぼゼロに。
+- **AWS CDKによるインフラ構築:** TypeScriptによるIaCでアプリエンジニアでもインフラ構築が可能。サーバレス構成でコストはほぼゼロに。
 
 ---
 
