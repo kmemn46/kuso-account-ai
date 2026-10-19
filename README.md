@@ -85,6 +85,7 @@
 2. **Amazon Bedrock のモデルアクセス有効化**
    - 使用するリージョン（例: `us-east-1` または `ap-northeast-1`）の AWS コンソールで、対象モデル（例: `Anthropic Claude Haiku 4.5`）のアクセス権を有効化しておいてください。
 3. **ツールのインストール**
+   - Python: (v3.12など)
    - Node.js (v18以上)
    - AWS CDK CLI (`npm install -g aws-cdk`)
 
@@ -110,6 +111,7 @@ npm run deploy:all
 ---
 
 ### 🛠️ npm run deploy:all の仕組み
+- **レイヤーの構築**: build-layer.js が動き、requirements.txt から必要なPythonライブラリを自動収集してLambdaレイヤー用フォルダに配置します。
 - **インフラのデプロイと出力**: CDKを実行し、API GatewayのURLなどを outputs.json として出力します。
 - **環境変数の自動生成**: generate-env.js が実行され、outputs.json からURLを抽出してフロントエンド用の .env.local を自動作成します。
 - **フロントエンドのビルド**: 正しいAPI URLが埋め込まれた状態でNext.jsのビルドを実行します。

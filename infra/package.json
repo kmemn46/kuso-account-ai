@@ -6,7 +6,8 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
-    "deploy:all": "cdk deploy --outputs-file ../frontend/outputs.json && node generate-env.js && cd ../frontend && npm run build && cd ../infra && cdk deploy"
+    "build:layer": "node build-layer.js",
+    "deploy:all": "npm run build:layer && cdk deploy --outputs-file ../frontend/outputs.json && node generate-env.js && cd ../frontend && npm run build && cd ../infra && cdk deploy"
   },
   "devDependencies": {
     "@swc/core": "^1.15.0",
