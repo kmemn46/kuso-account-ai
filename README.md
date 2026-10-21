@@ -54,28 +54,27 @@
 }}%%
 graph TD
     %% ユーザーとフロントエンド
-    User["👤 ユーザー"] -->|アクセス| CF["☁️ CloudFront / Next.js<br>(@aws-amplify/ui-react)"]
+    User["👤 ユーザー"] -->|アクセス| CF["☁️ CloudFront / Next.js<br/>(@aws-amplify/ui-react)"]
     
     subgraph Frontend ["フロントエンド (AWS Amplify Auth)"]
         CF -->|ログイン画面表示| UI["<Authenticator> UI"]
     end
 
     %% 認証フェーズ
-    UI -->|サインイン または 新規登録<br>Emailとパスワード| Cognito["🔐 AWS Cognito<br>(User Pool)"]
+    UI -->|サインイン または 新規登録<br/>Emailとパスワード| Cognito["🔐 AWS Cognito<br/>(User Pool)"]
     Cognito -->|JWTアクセストークン発行| UI
 
     %% APIリクエストフェーズ
-    UI -->|APIリクエスト<br>Authorization: Bearer <JWT>| APIGW["🚪 Amazon API Gateway<br>(HTTP API + JWT Authorizer)"]
+    UI -->|APIリクエスト<br/>Authorization: Bearer <JWT>| APIGW["🚪 Amazon API Gateway<br/>(HTTP API + JWT Authorizer)"]
     
     %% 認可・バックエンドフェーズ
-    APIGW -->|トークン検証 & sub抽出| Lambda["⚡️ AWS Lambda<br>(バックエンド処理)"]
+    APIGW -->|トークン検証 & sub抽出| Lambda["⚡️ AWS Lambda<br/>(バックエンド処理)"]
 
     style User fill:#f9f,stroke:#333,stroke-width:2px
     style Cognito fill:#ffa,stroke:#333,stroke-width:2px
     style APIGW fill:#aff,stroke:#333,stroke-width:2px
     style Lambda fill:#faf,stroke:#333,stroke-width:2px
 ```
-
 ---
 
 ### 🛠️ 使用技術 (Tech Stack)
