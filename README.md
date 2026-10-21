@@ -16,7 +16,6 @@
 
 | 入力・仕訳生成画面 | ダッシュボード・集計画面 |
 | :---: | :---: |
-| ![Input Screen](./docs/account_input.png) | ![Summary Screen](./docs/summary.png) |
 | ![Input Result Screen](./docs/account_result.png) | ![Summary Result Screen](./docs/summary_result.png) |
 
 ---
@@ -30,16 +29,44 @@
 
 ## ✨ 主な機能
 
-- **🤖 AI ポジティブ仕訳生成:** 自然言語による入力内容を Bedrock (Claude Haiku 4.5) で解析し、ポジティブな勘定科目と金額に自動変換
-- **📊 リアルタイム集計ダッシュボード:** DynamoDB に登録された過去の仕訳を一括取得し、ダッシュボードへ可視化
-- **🔒 セキュア＆高速なコンテンツ配信:** CloudFront (OAC) 経由で S3 の静的コンテンツを完全非公開配信
-- **🛡️ 堅牢な API セキュリティ:** API Gateway にて CloudFront Origin に限定した CORS 制御および Throttling (DoS 対策) を実施
+- **AI ポジティブ仕訳生成:** 自然言語による入力内容を Bedrock (Claude Haiku 4.5) で解析し、ポジティブな勘定科目と金額に自動変換
+- **リアルタイム集計ダッシュボード:** DynamoDB に登録された過去の仕訳を一括取得し、ダッシュボードへ可視化
+- **セキュア＆高速なコンテンツ配信:** CloudFront (OAC) 経由で S3 の静的コンテンツを完全非公開配信
+- **堅牢な API セキュリティ:** API Gateway にて CloudFront Origin に限定した CORS 制御および Throttling (DoS 対策) を実施
+- **ユーザー認証機能:** AWS CognitoとAWS Amplify、およびAPI GatewayのJWTオーソライザーを組み合わせたセキュアなユーザー認証
 
 ---
 
 ## 🏗️ アーキテクチャ構成図 (System Architecture)
 
-![Architecture Diagram](./docs/architecture.png)
+### 全体インフラ構成
+![Architecture Diagram](./docs/kuso-ai-arch.drawio.png)
+
+### 認証・APIリクエストのフロー
+```mermaid
+graph TD
+    %% ユーザーとフロントエンド
+    User["👤 ユーザー"] -->|アクセス| CF["☁️ CloudFront / Next.js<br>(@aws-amplify/ui-react)"]
+    
+    subgraph Frontend ["フロントエンド (AWS Amplify Auth)"]
+        CF -->|ログイン画面表示| UI["<Authenticator> UI"]
+    end
+
+    %% 認証フェーズ
+    UI -->|サインイン または 新規登録<br>Emailとパスワード| Cognito["🔐 AWS Cognito<br>(User Pool)"]
+    Cognito -->|JWTアクセストークン発行| UI
+
+    %% APIリクエストフェーズ
+    UI -->|APIリクエスト<br>Authorization: Bearer <JWT>| APIGW["🚪 Amazon API Gateway<br>(HTTP API + JWT Authorizer)"]
+    
+    %% 認可・バックエンドフェーズ
+    APIGW -->|トークン検証 & sub抽出| Lambda["⚡️ AWS Lambda<br>(バックエンド処理)"]
+
+    style User fill:#f9f,stroke:#333,stroke-width:2px
+    style Cognito fill:#ffa,stroke:#333,stroke-width:2px
+    style APIGW fill:#aff,stroke:#333,stroke-width:2px
+    style Lambda fill:#faf,stroke:#333,stroke-width:2px
+```
 
 ---
 
@@ -53,6 +80,8 @@
 ![AWS Lambda](https://img.shields.io/badge/AWS_Lambda-FF9900?style=for-the-badge&logo=awslambda&logoColor=white)
 ![Amazon DynamoDB](https://img.shields.io/badge/Amazon_DynamoDB-4053D6?style=for-the-badge&logo=amazondynamodb&logoColor=white)
 ![Amazon CloudFront](https://img.shields.io/badge/Amazon_CloudFront-8C4FFF?style=for-the-badge&logo=amazon&logoColor=white)
+![Amazon Cognito](https://img.shields.io/badge/Amazon%20Cognito-FF9900?style=for-the-badge&logo=amazonaws&logoColor=white")
+![Amazon API Gateway](https://img.shields.io/badge/API%20Gateway-FF9900?style=for-the-badge&logo=amazonaws&logoColor=white")
 
 | カテゴリ | 技術スタック |
 | :--- | :--- |
@@ -60,7 +89,7 @@
 | **Backend** | AWS API Gateway (HTTP API), AWS Lambda (Python) |
 | **Database** | Amazon DynamoDB |
 | **AI / LLM** | Amazon Bedrock (Claude Haiku 4.5), LangChain (`with_structured_output` / Pydantic) |
-| **Infrastructure** | Amazon S3, Amazon CloudFront (OAC), IAM |
+| **Infrastructure** | Amazon S3, Amazon CloudFront (OAC), Amazon Cognito（UserPool）, IAM |
 | **Infrastructure as Code** | AWS CDK (TypeScript) |
 
 ---
@@ -76,6 +105,29 @@
 - **AWS CDKによるインフラ構築:** TypeScriptによるIaCでアプリエンジニアでもインフラ構築が可能。サーバレス構成でコストはほぼゼロに。
 
 ---
+
+## 🔐 ユーザー認証機能 (AWS Cognito & Amplify)
+AWS CognitoとAWS Amplify、およびAPI GatewayのJWTオーソライザーを組み合わせたセキュアなユーザー認証システムを実装しています。
+
+### アーキテクチャの概要
+* **認証プロバイダー**: AWS Cognito User Pool (`signInAliases: { email: true }`, 自己登録有効)
+* **フロントエンド**: Next.js (App Router) + AWS Amplify (`@aws-amplify/ui-react` の `<Authenticator>` を使用)
+* **API保護**: Amazon API Gateway (HTTP API v2) + JWT Authorizer (`HttpJwtAuthorizer`)
+* **インフラ管理**: AWS CDK (`removalPolicy: cdk.RemovalPolicy.DESTROY` によるクリーンなスタック破棄に対応)
+
+### 実装・検証の流れ
+1. **バックエンド (CDK)**
+   * Cognito User Pool、Client、およびAPI GatewayのJWTオーソライザーをデプロイ。
+   * 生成されたCognitoの設定情報は自動的に `CfnOutput` を経由してフロントエンドの環境変数（`.env.local`）に反映されます。
+
+2. **フロントエンド (Next.js)**
+   * ルートレイアウト（`app/layout.tsx`）にて `Amplify.configure()` を実行し初期化。
+   * `app/page.tsx` にて `<Authenticator>` コンポーネントを配置し、未認証ユーザーを自動でサインイン・サインアップ画面へ誘導。
+
+3. **セキュアなAPI通信**
+   * フロントエンド側で `fetchAuthSession()` からアクセストークン（JWT）を取得。
+   * APIリクエスト時に `Authorization: Bearer <token>` ヘッダーを付与。
+   * バックエンドのLambda側でイベントから `sub`（ユーザー固有ID）を安全に抽出し、ユーザー単位のデータ処理を実現。
 
 ## 📋 前提条件 (Prerequisites)
 デプロイする前に、以下の準備が必要です。
@@ -112,9 +164,9 @@ npm run deploy:all
 
 ### 🛠️ npm run deploy:all の仕組み
 - **レイヤーの構築**: build-layer.js が動き、requirements.txt から必要なPythonライブラリを自動収集してLambdaレイヤー用フォルダに配置します。
-- **インフラのデプロイと出力**: CDKを実行し、API GatewayのURLなどを outputs.json として出力します。
+- **インフラのデプロイと出力**: CDKを実行し、API GatewayのURL、Congnito UserPool Idなどを outputs.json として出力します。
 - **環境変数の自動生成**: generate-env.js が実行され、outputs.json からURLを抽出してフロントエンド用の .env.local を自動作成します。
-- **フロントエンドのビルド**: 正しいAPI URLが埋め込まれた状態でNext.jsのビルドを実行します。
+- **フロントエンドのビルド**: 正しいAPI URLと認証設定が埋め込まれた状態でNext.jsのビルドを実行します。
 - **再デプロイ**: ビルドされた最新の静的ファイルをS3/CloudFrontへ反映させます。
 
 ---
