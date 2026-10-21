@@ -19,9 +19,20 @@ CLOUDFRONT_URL = os.environ.get("CLOUDFRONT_URL", "*")
 
 def lambda_handler(event, context):
     try:
-        # クエリパラメータまたはボディからtarget_monthとuser_idを取得
+        # API GatewayのオーソライザからJWTのクレームを取得
+        authorizer = event.get('requestContext', {}).get('authorizer', {})
+        claims = authorizer.get('jwt', {}).get('claims', {})
+
+        # 'sub'（ユーザーの固有ID）を取得する
+        user_id = claims.get('sub')
+        if not user_id:
+            return {
+                'statusCode': 401,
+                'body': json.dumps({'message': 'Unauthorized: ユーザーIDが見つかりません'})
+            }
+        
+        # クエリパラメータまたはボディからtarget_monthを取得
         params = event.get('queryStringParameters') or {}
-        user_id = params.get('user_id', 'USER#123') # 本来は認証情報から取得
         target_month = params.get('month', '2026-10')
 
         pk = f"{user_id}#{target_month}"
