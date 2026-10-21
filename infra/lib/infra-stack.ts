@@ -1,4 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
@@ -7,6 +8,7 @@ import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
+import * as apigwv2Authorizers from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import * as apigwv2_integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as path from 'path';
@@ -102,8 +104,41 @@ export class InfraStack extends cdk.Stack {
     // DynamoDBの読み込み権限を付与
     table.grantReadData(lambdaSummary);
 
+    // ==================================================
+    // 6. Cognito User Poolの作成 (セルフサインアップ許可)
+    // ==================================================
+    const userPool = new cognito.UserPool(this, 'KusoAppUserPool', {
+      userPoolName: 'kuso-app-user-pool',
+      selfSignUpEnabled: true,      // 自分でサインアップ可能
+      signInCaseSensitive: false,
+      signInAliases: {
+        email: true,
+        username: false,
+      },
+      autoVerify: { email: true },  // メールアドレス確認を有効化
+      standardAttributes: {
+        email: { required: true, mutable: true}
+      },
+      removalPolicy: cdk.RemovalPolicy.DESTROY,  // 検証用
+    });
+
+    // フロントエンドから利用するためのアプリクライアントを生成
+    const userPoolClient = userPool.addClient('KusoAppClient', {
+      userPoolClientName: 'kuso-app-client',
+      generateSecret: false,   // クライアントシークレットは不要
+    })
+
+    // HTTP API用のJWTオーソライザーの設定
+    const jwtAuthorizer = new apigwv2Authorizers.HttpJwtAuthorizer(
+      'CognitoAuthorizer',
+      `https://cognito-idp.${this.region}.amazonaws.com/${userPool.userPoolId}`,
+      {
+        jwtAudience: [userPoolClient.userPoolClientId],
+      },
+    )
+
     // ==========================================
-    // 6. API Gatewayの作成 (HTTP API)
+    // 7. API Gatewayの作成 (HTTP API)
     // ==========================================
     const httpApi = new apigwv2.HttpApi(this, 'AppHttpApi', {
       apiName: 'Serverless App HTTP API',
@@ -135,6 +170,7 @@ export class InfraStack extends cdk.Stack {
       path: '/journal',
       methods: [apigwv2.HttpMethod.POST],
       integration: new apigwv2_integrations.HttpLambdaIntegration('JournalIntegration', lambdaJournal),
+      authorizer: jwtAuthorizer,  // Cognitoの認証
     });
 
     // ルートの設定 /summary (GET)
@@ -142,10 +178,11 @@ export class InfraStack extends cdk.Stack {
       path: '/summary',
       methods: [apigwv2.HttpMethod.GET],
       integration: new apigwv2_integrations.HttpLambdaIntegration('SummaryIntegration', lambdaSummary),
+      authorizer: jwtAuthorizer, // Cognitoの認証
     });
 
     // ==========================================
-    // 7. S3へのフロントエンドビルド配信
+    // 8. S3へのフロントエンドビルド配信
     // ==========================================
     new s3deploy.BucketDeployment(this, 'DeployWithInvalidation', {
       sources: [s3deploy.Source.asset(path.join(__dirname, '../../frontend/out'))],
@@ -155,7 +192,7 @@ export class InfraStack extends cdk.Stack {
     });
 
     // ==========================================
-    // 8. 出力設定
+    // 9. 出力設定
     // ==========================================
     // CloudFrontのURL(DomainName)
     new cdk.CfnOutput(this, 'CloudFrontURL', {
@@ -169,5 +206,17 @@ export class InfraStack extends cdk.Stack {
       description: 'HTTP API Base URL',
     });
 
+    // CognitoのユーザープールID
+    new cdk.CfnOutput(this, 'UserPoolId', {
+      value: userPool.userPoolId,
+      exportName: 'KusoAppUserPoolId',
+    });
+
+    // CognitoのクライアントID
+    new cdk.CfnOutput(this, 'UserPoolClientId', {
+      value: userPoolClient.userPoolClientId,
+      exportName: 'KusoAppUserPoolClientId',
+    });
+    
   }
 }

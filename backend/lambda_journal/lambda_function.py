@@ -31,10 +31,21 @@ CLOUDFRONT_URL = os.environ.get("CLOUDFRONT_URL", "*")
 # Lambdaのエントリーポイント (メイン処理)
 def lambda_handler(event, context):
     try:
+        # API GatewayのオーソライザからJWTのクレームを取得
+        authorizer = event.get('requestContext', {}).get('authorizer', {})
+        claims = authorizer.get('jwt', {}).get('claims', {})
+
+        # 'sub'（ユーザーの固有ID）を取得する
+        user_id = claims.get('sub')
+        if not user_id:
+            return {
+                'statusCode': 401,
+                'body': json.dumps({'message': 'Unauthorized: ユーザーIDが見つかりません'})
+            }
+
         # API Gateway経由のリクエストボディを取得
         body = json.loads(event.get('body', {})) if isinstance(event.get('body'), str) else event.get('body', {})
         user_event = body.get('user_event', '既読無視された')
-        user_id = body.get('user_id', 'USER#123') # 本来は認証情報から取得
 
         # 現在日時とPK/SKの生成
         now = datetime.now()
