@@ -43,38 +43,8 @@
 ![Architecture Diagram](./docs/kuso-ai-arch.drawio.png)
 
 ### 認証・APIリクエストのフロー
-```mermaid
-%%{init: {
-  "flowchart": { 
-    "nodeSpacing": 30, 
-    "rankSpacing": 40,
-    "padding": 15
-  },
-  "theme": "default"
-}}%%
-graph TD
-    %% ユーザーとフロントエンド
-    User["👤 ユーザー"] -->|アクセス| CF["☁️ CloudFront / Next.js &nbsp;&nbsp;&nbsp;<br/>(@aws-amplify/ui-react) &nbsp;&nbsp;&nbsp;"]
-    
-    subgraph Frontend ["フロントエンド (AWS Amplify Auth)"]
-        CF -->|ログイン画面表示| UI["<Authenticator> UI"]
-    end
+![Auth Diagram](./docs/auth-flow.png)
 
-    %% 認証フェーズ
-    UI -->|サインイン または 新規登録<br/>Emailとパスワード| Cognito["md:🔐 AWS Cognito<br/>(User Pool)"]
-    Cognito -->|JWTアクセストークン発行| UI
-
-    %% APIリクエストフェーズ
-    UI -->|APIリクエスト<br/>Authorization: Bearer <JWT>| APIGW["md:🚪 Amazon API Gateway<br/>(HTTP API + JWT Authorizer)"]
-    
-    %% 認可・バックエンドフェーズ
-    APIGW -->|トークン検証 & sub抽出| Lambda["md:⚡️ AWS Lambda<br/>(バックエンド処理)"]
-
-    style User fill:#f9f,stroke:#333,stroke-width:2px
-    style Cognito fill:#ffa,stroke:#333,stroke-width:2px
-    style APIGW fill:#aff,stroke:#333,stroke-width:2px
-    style Lambda fill:#faf,stroke:#333,stroke-width:2px
-```
 ---
 
 ### 🛠️ 使用技術 (Tech Stack)
