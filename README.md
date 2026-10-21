@@ -40,7 +40,7 @@
 ## 🏗️ アーキテクチャ構成図 (System Architecture)
 
 ### 全体インフラ構成
-![Architecture Diagram](./docs/kuso-ai-arch.drawio.png)
+![Architecture Diagram](./docs/kuso-app-arch.png)
 
 ### 認証・APIリクエストのフロー
 ![Auth Diagram](./docs/auth-flow.png)
