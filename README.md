@@ -44,6 +44,14 @@
 
 ### 認証・APIリクエストのフロー
 ```mermaid
+%%{init: {
+  "flowchart": { 
+    "nodeSpacing": 30, 
+    "rankSpacing": 40,
+    "padding": 15
+  },
+  "theme": "default"
+}}%%
 graph TD
     %% ユーザーとフロントエンド
     User["👤 ユーザー"] -->|アクセス| CF["☁️ CloudFront / Next.js<br>(@aws-amplify/ui-react)"]
