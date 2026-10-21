@@ -54,7 +54,7 @@
 }}%%
 graph TD
     %% ユーザーとフロントエンド
-    User["👤 ユーザー"] -->|アクセス| CF["md:☁️ CloudFront / Next.js<br/>(@aws-amplify/ui-react)"]
+    User["👤 ユーザー"] -->|アクセス| CF["☁️ CloudFront / Next.js &nbsp;&nbsp;&nbsp;<br/>(@aws-amplify/ui-react) &nbsp;&nbsp;&nbsp;"]
     
     subgraph Frontend ["フロントエンド (AWS Amplify Auth)"]
         CF -->|ログイン画面表示| UI["<Authenticator> UI"]
