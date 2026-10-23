@@ -1,0 +1,13 @@
+{
+  "name": "cdk-serverless-auth",
+  "version": "1.0.0",
+  "main": "dist/auth-api-construct.js",
+  "types": "dist/auth-api-construct.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "peerDependencies": {
+    "aws-cdk-lib": "^2.273.0",
+    "constructs": "^10.8.1"
+  }
+}

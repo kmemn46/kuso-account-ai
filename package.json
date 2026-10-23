@@ -1,0 +1,16 @@
+{
+  "name": "kuso-account-ai-project",
+  "private": true,
+  "workspaces": [
+    "infra",
+    "packages/*",
+    "frontend"
+  ],
+  "devDependencies": {
+    "@types/jest": "^30.0.0"
+  },
+  "scripts": {
+    "build:packages": "npm run build --workspaces",
+    "deploy:all": "npm run build:packages && cd infra && npm run build:layer && cdk deploy --outputs-file ../frontend/outputs.json && node generate-env.js && cd ../frontend && npm run build && cd ../infra && cdk deploy"
+  }
+}

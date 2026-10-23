@@ -20,6 +20,9 @@
     "typescript": "~7.0.2"
   },
   "dependencies": {
+    "cdk-serverless-auth": "file:../packages/cdk-serverless-auth",
+    "cdk-ai-backend": "file:../packages/cdk-ai-backend",
+    "cdk-s3-cloudfront": "file:../packages/cdk-s3-cloudfront",
     "aws-cdk-lib": "^2.273.0",
     "constructs": "^10.8.1"
   }
