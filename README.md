@@ -125,16 +125,12 @@ AWS CognitoとAWS Amplify、およびAPI GatewayのJWTオーソライザーを�
 ```bash
 # 1. リポジトリのクローン
 git clone https://github.com/kmemn46/kuso-account-ai.git
+cd <repository-directory>
 
-# 2. インフラおよびフロントエンドの依存関係インストール
-cd infra
+# 2. 依存関係の一括インストール
 npm install
 
-cd ../frontend
-npm install
-
-# 3. 一括デプロイ
-cd infra
+# 3. 一括ビルド＆デプロイ
 npm run deploy:all
 ```
 ---

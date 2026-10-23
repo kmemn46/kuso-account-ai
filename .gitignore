@@ -2,6 +2,9 @@
 
 # dependencies
 /node_modules
+node_modules/
+*/node_modules/
+*/*/node_modules/
 /.pnp
 .pnp.js
 
@@ -9,6 +12,7 @@
 /coverage
 
 # next.js
+.next/
 frontend/node_modules/
 frontend/.next/
 frontend/out/
@@ -16,6 +20,7 @@ frontend/.turbo/
 frontend/coverage/
 frontend/.vercel/
 frontend/outputs.json
+frontend/dist/
 
 # production
 /build
@@ -23,6 +28,7 @@ frontend/outputs.json
 # misc
 .DS_Store
 *.pem
+Thumbs.db
 
 # debug
 npm-debug.log*
@@ -34,6 +40,8 @@ frontend/.env.local
 frontend/.env*.local
 .env
 *.env.*
+.env.local
+.env.*.local
 
 # vercel
 .vercel
@@ -49,3 +57,10 @@ infra/.cdk.staging/
 
 # Lambdaレイヤーの外部ライブラリフォルダをGitの管理から除外する
 backend/layers/common_layer/python/
+
+# TypeScript などのビルド成果物 (各 packages 内の dist)
+packages/*/dist/
+
+# エディタ固有の設定
+.vscode/
+.idea/
