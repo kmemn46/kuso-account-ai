@@ -63,11 +63,11 @@
 | カテゴリ | 技術スタック |
 | :--- | :--- |
 | **Frontend** | Next.js (App Router / Static Export), TypeScript, Tailwind CSS v4, Turbopack |
-| **Backend** | AWS API Gateway (HTTP API), AWS Lambda (Python) |
-| **Database** | Amazon DynamoDB |
+| **Backend** | AWS Lambda (Python) |
+| **Database & Auth** | Amazon DynamoDB, Amazon Cognito (JWT Authorizer) |
 | **AI / LLM** | Amazon Bedrock (Claude Haiku 4.5), LangChain (`with_structured_output` / Pydantic) |
-| **Infrastructure** | Amazon S3, Amazon CloudFront (OAC), Amazon Cognito（UserPool）, IAM |
-| **Infrastructure as Code** | AWS CDK (TypeScript) |
+| **Infrastructure** | AWS CDK (TypeScript) |
+| **Security & Network** | Amazon S3, Amazon CloudFront (OAC), API Gateway（CORS, Throttling） |
 
 ---
 
@@ -78,8 +78,8 @@
 
 ### 2. コスト・防御意識を両立したインフラ設計
 - **S3 + CloudFront (OAC):** S3 バケットのパブリックアクセスを完全拒否し、CloudFront OAC 経由のみに最小権限アクセスを限定。
-- **CORS ＆ Throttling 制限:** API Gateway 側で Access-Control-Allow-Origin を本番 CloudFront ドメインのみに絞り込み、不要な外部直叩きによるクラウドコスト肥大化リスクをシャットアウト。
-- **AWS CDKによるインフラ構築:** TypeScriptによるIaCでアプリエンジニアでもインフラ構築が可能。サーバレス構成でコストはほぼゼロに。
+- **CORS ＆ Throttling 制限:** API Gateway 側で Access-Control-Allow-Origin を本番 CloudFront ドメインのみに絞り込み、不要な外部直叩きによるクラウドコスト肥大化リスクシャットアウト。API破産を防ぐため、API Gatewayに適切なスロットリング（流用制限）を設定。
+- **AWS CDKによるインフラ構築:** `cdk deploy` 一発で環境構築が完了。サーバレス構成でリクエストがないときはほぼ0円で運用可能に。
 
 ---
 
