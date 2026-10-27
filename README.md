@@ -67,7 +67,7 @@
 | **Database & Auth** | Amazon DynamoDB, Amazon Cognito (JWT Authorizer) |
 | **AI / LLM** | Amazon Bedrock (Claude Haiku 4.5), LangChain (`with_structured_output` / Pydantic) |
 | **Infrastructure** | AWS CDK (TypeScript) |
-| **Security & Network** | Amazon S3, Amazon CloudFront (OAC), API Gateway（CORS, Throttling） |
+| **Security & Network** | Amazon CloudFront (OAC), API Gateway（CORS, Throttling） |
 
 ---
 
