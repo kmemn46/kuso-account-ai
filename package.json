@@ -7,7 +7,9 @@
     "frontend"
   ],
   "devDependencies": {
-    "@types/jest": "^30.0.0"
+    "@types/node": "^24.10.1",
+    "@types/jest": "^30.0.0",
+    "typescript": "^5"
   },
   "scripts": {
     "build:packages": "npm run build --workspaces",
