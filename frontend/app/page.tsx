@@ -58,7 +58,7 @@ export default function ThemeParkHome() {
                             <h2 className="text-2xl font-bold mb-2 text-yellow-200">{app.title}</h2>
                             <p className="text-gray-300 text-sm mb-6">{app.description}</p>
                         </div>
-                        <Link href={app.path} className="inline-block text-center bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-2 px-4 rounded-xl transition-colors duration-200 shadow-md">
+                        <Link href={app.path} prefetch={false} className="inline-block text-center bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-2 px-4 rounded-xl transition-colors duration-200 shadow-md">
                             遊んでみる 🚀
                         </Link>
                     </div>

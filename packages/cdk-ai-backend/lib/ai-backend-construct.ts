@@ -55,7 +55,7 @@ export class AiBackendConstruct extends Construct {
         // =========================================================
         this.writeLambda = new lambda.Function(this, 'LambdaJournalFunction', {
             runtime: lambda.Runtime.PYTHON_3_12,
-            handler: 'lambda_function.lambda_handler',
+            handler: 'lambda_journal.lambda_handler',
             code: lambda.Code.fromAsset(props.writeLambdaEntryPath),
             timeout: cdk.Duration.seconds(30),
             layers: layers,
@@ -70,7 +70,7 @@ export class AiBackendConstruct extends Construct {
         // ==============================================
         this.readLambda = new lambda.Function(this, 'LambdaSummaryFunction', {
             runtime: lambda.Runtime.PYTHON_3_12,
-            handler: 'lambda_function.lambda_handler',
+            handler: 'lambda_summary.lambda_handler',
             code: lambda.Code.fromAsset(props.readLambdaEntryPath),
             timeout: cdk.Duration.seconds(30),
             environment: {

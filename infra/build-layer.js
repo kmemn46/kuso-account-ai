@@ -5,7 +5,7 @@ const path = require('path');
 console.log('Lambdaレイヤー用のパッケージを準備しています...');
 
 // レイヤー用の出力先ディレクトリ
-const layerPythonDir = path.join(__dirname, '../backend/layers/common_layer/python');
+const layerPythonDir = path.join(__dirname, '../backend/layers/common-layer/python');
 
 // 既存のレイヤー用フォルダが存在する場合は、中身ごと一度きれいスッキリ削除
 if (fs.existsSync(layerPythonDir)) {
