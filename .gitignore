@@ -56,7 +56,7 @@ infra/node_modules/
 infra/.cdk.staging/
 
 # Lambdaレイヤーの外部ライブラリフォルダをGitの管理から除外する
-backend/layers/common_layer/python/
+backend/layers/common-layer/python/
 
 # TypeScript などのビルド成果物 (各 packages 内の dist)
 packages/*/dist/
