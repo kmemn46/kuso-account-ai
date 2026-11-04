@@ -5,6 +5,7 @@ import { ServerlessAuthConstruct } from 'cdk-serverless-auth';
 import { Construct } from 'constructs';
 import * as path from 'path';
 import { PositiveApiConstruct } from './features/positive-api';
+import { HenshinApiConstruct } from './features/henshin-api';
 
 
 export class InfraStack extends cdk.Stack {
@@ -40,6 +41,13 @@ export class InfraStack extends cdk.Stack {
       httpApi: auth.httpApi,
       jwtAuthorizer: auth.jwtAuthorizer,
     });
+
+    // アプリ2：変身！ 紙芝居
+    const HenshinApi =  new HenshinApiConstruct(this, 'HenshinApi', {
+      frontendUrl: frontendUrl,
+      userPoolId: auth.userPool.userPoolId,
+      userPoolClientId: auth.userPoolClient.userPoolClientId,
+    })
     
     // ==========================================
     // 3. 出力設定
@@ -62,11 +70,18 @@ export class InfraStack extends cdk.Stack {
         description: 'Cognito User Pool Client ID',
     });
 
+    // アプリ1用
     // Api Gatewayのエンドポイント
     new cdk.CfnOutput(this, 'HttpApiURL', {
         value: `${auth.httpApi.apiEndpoint}/${auth.stage.stageName}`,
         description: 'HTTP API Base URL',
     });
 
+    // アプリ2用
+    // Lambda関数URL
+    new cdk.CfnOutput(this, 'HenshinLambdaUrl', {
+        value: HenshinApi.functionUrl.url,
+        description: 'Henshin Stream Lambda Function URL with CORS',
+    });
   }
 }

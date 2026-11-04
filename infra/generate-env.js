@@ -38,12 +38,14 @@ try {
   const apiUrl = stackOutputs.HttpApiURL || '';
   const userPoolId = stackOutputs.UserPoolId || '';
   const userPoolClientId = stackOutputs.UserPoolClientId || '';
+  const HenshinLambdaUrl = stackOutputs.HenshinLambdaUrl || '';
 
   // .env.local に正しいURL形式で書き出す
   const envContent = `
   NEXT_PUBLIC_API_URL=${apiUrl}
   NEXT_PUBLIC_USER_POOL_ID=${userPoolId}
   NEXT_PUBLIC_USER_POOL_CLIENT_ID=${userPoolClientId}
+  NEXT_PUBLIC_HENSHIN_LAMBDA_URL=${HenshinLambdaUrl}
   `.trim();
 
   fs.writeFileSync(envPath, envContent, 'utf8');
