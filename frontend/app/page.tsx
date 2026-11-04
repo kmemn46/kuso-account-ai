@@ -21,10 +21,10 @@ const kusoApps: KusoApp[] = [
     },
     {
         id: 'app-2',
-        title: '企画検討中・・・',
-        description: '',
+        title: '蒸着せよ！',
+        description: 'なんでも蒸着させます！ 蒸着プロセスをデジタル紙芝居と共にお送りします。',
         emoji: '🏃‍♂️',
-        path: '/apps/excuse',
+        path: '/apps/henshin',
     },
     {
         id: 'app-3',

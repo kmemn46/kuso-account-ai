@@ -9,7 +9,7 @@ import '@aws-amplify/ui-react/styles.css';
 // API Gatewayエンドポイント
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-export default function Home() {
+export default function PositivePage() {
   const [eventText, setEventText] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
