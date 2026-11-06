@@ -1,6 +1,7 @@
 import { BedrockRuntimeClient, InvokeModelCommand, InvokeModelWithResponseStreamCommand } from '@aws-sdk/client-bedrock-runtime';
 import { CognitoJwtVerifier } from 'aws-jwt-verify';
 import { APIGatewayProxyEventV2, Context } from 'aws-lambda';
+import { APIGatewayProxyResultV2 } from 'aws-lambda';
 
 // AWS Lambdaのレスポンスストリーミング用グローバル定義
 declare const awsLambda: {
@@ -14,9 +15,10 @@ declare const awsLambda: {
 // ==========================================
 const USER_POOL_ID = process.env.USER_POOL_ID || 'us-east-1_xxxxxxxxx';
 const CLIENT_ID = process.env.CLIENT_ID || 'your-client-id';
+const FRONTEND_URL = process.env.FRONTEND_URL || '*';
 
 // aws-jwt-verify を使った Cognito 用バリデータの初期化
-const verifier = CognitoJwtVerifier.create({
+const jwtVerifier = CognitoJwtVerifier.create({
   userPoolId: USER_POOL_ID,
   tokenUse: 'access', // または 'id'
   clientId: CLIENT_ID,
@@ -29,56 +31,62 @@ const bedrockClient = new BedrockRuntimeClient({ region: "us-west-2" });
 export const handler = awslambda.streamifyResponse(
     async (event: APIGatewayProxyEventV2, responseStream: NodeJS.WritableStream, context: Context) => {
 
-        // レスポンスヘッダーの設定
-        const metadata = {
-            statusCode: 200,
-            headers: {
-                'Content-Type': 'text/plain; charset=utf-8',
-                'Transfer-Encoding': 'chunked',
-            },
+        const corsHeaders = {
+            "Access-Control-Allow-Origin": FRONTEND_URL,
+            "Access-Control-Allow-Methods": "OPTIONS,POST,GET",
+            "Access-Control-Allow-Headers": "Content-Type,X-User-Token,x-amz-content-sha256",
         };
-        const httpResponseStream = awslambda.HttpResponseStream.from(responseStream as any, metadata);
 
-        // ==========================================
-        // 1. JWTトークンの検証
-        // ==========================================
-        try {
-            const authHeader = event.headers?.authorization || event.headers?.Authorization;
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                httpResponseStream.write(JSON.stringify({ error: '認証トークンがありません' }));
-                httpResponseStream.end();
-                return;
-            }
-            const token = authHeader.split(' ')[1];
-            
-            // トークンの検証（不正な場合はここでエラーがスローされます）
-            await verifier.verify(token);
+        const httpMethod = event.requestContext?.http?.method || 'GET';
 
-        } catch (err) {
-            console.error('Token verification failed:', err);
-            httpResponseStream.write(JSON.stringify({ error: '認証に失敗しました (403 Forbidden)' }));
-            httpResponseStream.end();
+        // OPTIONSリクエスト（プリフライト）の処理
+        if (httpMethod === 'OPTIONS') {
+            const httpResponseMetadata = {
+                statusCode: 200,
+                headers: corsHeaders,
+            };
+            const stream = awslambda.HttpResponseStream.from(responseStream as any, httpResponseMetadata);
+            stream.write("");
+            stream.end();
             return;
         }
 
-        // ==========================================
-        // 2. 変身ストリーミングの演出データ送信
-        // ==========================================
-        // AIへの指示（プロンプト）
         try {
 
-            // フロントエンドから送信されたお題を取得 (デフォルトは「特撮ヒーロー」)
-            let subject = "特撮ヒーロー";
-            if (event.body) {
-                try {
-                    const body = JSON.parse(event.body);
-                    if (body.subject) {
-                        subject = body.subject;
-                    }
-                } catch (e) {
-                    // パース失敗時にはデフォルトを使用
-                }
+            // 専用のカスタムヘッダーからJWTトークンを取得
+            const authHeader = event.headers?.['x-user-token'] || event.headers?.['X-User-Token'];
+            //const authHeader = event.headers?.authorization || event.headers?.Authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                const unauthorizedMetadata = {
+                    statusCode: 401,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                };
+                const stream = awslambda.HttpResponseStream.from(responseStream as any, unauthorizedMetadata);
+                stream.write(JSON.stringify({ error: "Unauthorized: Authorization header is missing or invalid" }));
+                stream.end();
+                return;
             }
+            const token = authHeader.split(' ')[1];
+
+            // aws-jwt-verify を使ってトークンを検証（無効な場合は例外がスローされます）
+            const payloadJwt = await jwtVerifier.verify(token);
+            console.log("JWT検証成功！ユーザーID:", payloadJwt.sub);
+
+            // Bedrock呼び出し処理
+            const body = event.body ? JSON.parse(event.body) : {};
+            const subject = body.subject || "AIへの指示";
+
+            // 認証成功＆データ準備完了のレスポンスヘッダー設定（ストリーミング用）
+            const httpResponseMetadata = {
+                statusCode: 200,
+                headers: {
+                    ...corsHeaders,
+                    "Content-Type": "text/plain; charset=utf-8",
+                    "Transfer-Encoding": "chunked",
+                },
+            };
+
+            const stream = awslambda.HttpResponseStream.from(responseStream as any, httpResponseMetadata);
 
             const prompt = `
                 あなたは特撮ヒーローの熱い変身シーンの実況ナレーターです。
@@ -130,7 +138,7 @@ export const handler = awslambda.streamifyResponse(
                                 // マーカーの手前までの通常のテキストを送信
                                 const normalText = textBuffer.substring(lastIndex, match.index);
                                 if (normalText) {
-                                    httpResponseStream.write(JSON.stringify({ type: "text", content: normalText }) + '\n');
+                                    stream.write(JSON.stringify({ type: "text", content: normalText }) + '\n');
                                 }
 
                                 // 画像生成の処理
@@ -138,7 +146,7 @@ export const handler = awslambda.streamifyResponse(
 
                                 try {
                                     const imageBase64 = await generateImageWithStableCore(imagePrompt);
-                                    httpResponseStream.write(JSON.stringify({
+                                    stream.write(JSON.stringify({
                                         type: "image_result",
                                         prompt: imagePrompt,
                                         data: imageBase64
@@ -155,7 +163,7 @@ export const handler = awslambda.streamifyResponse(
 
                             // マーカーが含まれていない通常のテキストであればそのまま送信
                             if (textBuffer && !textBuffer.includes('[')) {
-                                httpResponseStream.write(JSON.stringify({ type: "text", content: textBuffer }) + '\n');
+                                stream.write(JSON.stringify({ type: "text", content: textBuffer }) + '\n');
                                 textBuffer = "";
                             }
                         }
@@ -164,15 +172,22 @@ export const handler = awslambda.streamifyResponse(
 
                 // 最後にバッファに残ったテキストがあれば送信
                 if (textBuffer.trim()) {
-                    httpResponseStream.write(JSON.stringify({ type: "text", content: textBuffer }) + '\n');
+                    stream.write(JSON.stringify({ type: "text", content: textBuffer }) + '\n');
                 }
             }
-        } catch (err: any) {
-            console.error("Bedrock Stream Error:", err);
-            const errorPayload = JSON.stringify({ type: "error", message: err.message }) + '\n';
-            httpResponseStream.write(errorPayload);
-        } finally {
-            httpResponseStream.end();
+
+            // すべての書き込みが終わったらストリームを閉じる
+            stream.end();
+
+        } catch (error: any) {
+            console.error("処理エラー:", error);
+            const errorMetadata = {
+                statusCode: 500,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            };
+            const stream = awslambda.HttpResponseStream.from(responseStream as any, errorMetadata);
+            stream.write(JSON.stringify({ error: `Unauthorized: ${error.message}` }));
+            stream.end();
         }
     }
 );

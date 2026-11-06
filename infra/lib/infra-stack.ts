@@ -78,9 +78,9 @@ export class InfraStack extends cdk.Stack {
     });
 
     // アプリ2用
-    // Lambda関数URL
+    // Lambda関数URL (Lambda専用Cloudfrontドメイン名)
     new cdk.CfnOutput(this, 'HenshinLambdaUrl', {
-        value: HenshinApi.functionUrl.url,
+        value: HenshinApi.lambdaApiUrl,
         description: 'Henshin Stream Lambda Function URL with CORS',
     });
   }
