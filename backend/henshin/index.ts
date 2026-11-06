@@ -1,7 +1,6 @@
 import { BedrockRuntimeClient, InvokeModelCommand, InvokeModelWithResponseStreamCommand } from '@aws-sdk/client-bedrock-runtime';
 import { CognitoJwtVerifier } from 'aws-jwt-verify';
 import { APIGatewayProxyEventV2, Context } from 'aws-lambda';
-import { APIGatewayProxyResultV2 } from 'aws-lambda';
 
 // AWS Lambdaのレスポンスストリーミング用グローバル定義
 declare const awsLambda: {
