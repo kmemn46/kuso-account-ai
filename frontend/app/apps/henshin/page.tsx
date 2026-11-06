@@ -6,14 +6,23 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
 // Lambda関数URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_HENSHIN_LAMBDA_URL;
+const API_BASE_URL = process.env.NEXT_PUBLIC_HENSHIN_LAMBDA_CLOUDFRONT_URL;
+
+// 1. 文字列のSHA-256ハッシュ（16進数文字列）を計算する関数
+async function calculateSha256(message: string) {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+}
 
 export default function HenshinPage() {
     const [subject, setSubject] = useState('猫');
     const [narration, setNarration] = useState<string>('');
     const [queue, setQueue] = useState<string[]>([]);
 
-    // ★ 画像とローディング状態を管理するリスト
+    // 画像とローディング状態を管理するリスト
     // status: 'loading'（生成中） または 'completed'（完了）
     const [images, setImages] = useState<{ prompt: string; url?: string; status: 'loading' | 'completed' }[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -60,14 +69,22 @@ export default function HenshinPage() {
                 return;
             }
 
+            // 送信するJSONデータを作成
+            const bodyString = JSON.stringify({ subject });
+
+            // リクエストボディのSHA-256ハッシュを計算する
+            const contentSha256 = await calculateSha256(bodyString);
+
             // fetchを使ってLambda関数URLへリクエスト送信
             const response = await fetch(`${API_BASE_URL}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
+                    // OACのPOST検証を通すために必須のハッシュヘッダーを追加
+                    'x-amz-content-sha256': contentSha256,
+                    'X-User-Token': `Bearer ${token}`,  // Authorization ではなく専用のカスタムヘッダーにする
                 },
-                body: JSON.stringify({ subject }),
+                body: bodyString,
             });
 
             if (!response.ok || !response.body) {
