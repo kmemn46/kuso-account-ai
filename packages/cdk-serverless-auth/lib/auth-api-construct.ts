@@ -6,6 +6,10 @@ import { Construct } from 'constructs';
 
 // 外部から受け取る設定の型定義
 export interface ServerlessAuthProps {
+    /** 環境 */
+    envName: string;
+    removalPolicy: cdk.RemovalPolicy;
+
     /** 許可するオリジン (例：CloudFrontのURLなど) */
     allowedOrigins: string[];
 }
@@ -31,7 +35,7 @@ export class ServerlessAuthConstruct extends Construct {
         // 1. Cognito User Poolの作成
         // ==================================================
         this.userPool = new cognito.UserPool(this, 'UserPool', {
-            userPoolName: 'user-pool',
+            userPoolName: `${props.envName}-user-pool`,
             selfSignUpEnabled: true,      // 自分でサインアップ可能
             signInCaseSensitive: false,
             signInAliases: {
@@ -42,12 +46,12 @@ export class ServerlessAuthConstruct extends Construct {
             standardAttributes: {
                 email: { required: true, mutable: true}
             },
-            removalPolicy: cdk.RemovalPolicy.DESTROY,  // 開発用：スタック削除時にプールも削除される設定
+            removalPolicy: props.removalPolicy,  // 開発用：スタック削除時にプールも削除される設定
         });
 
         // User Pool Clientの作成
         this.userPoolClient = this.userPool.addClient('UserPoolClient', {
-            userPoolClientName: 'user-pool-client',
+            userPoolClientName: `${props.envName}-user-pool-client`,
             generateSecret: false,   // クライアントシークレットは不要
         });
 
@@ -67,7 +71,7 @@ export class ServerlessAuthConstruct extends Construct {
         // 2. API Gatewayの作成 (HTTP API)
         // ==========================================
         this.httpApi = new apigwv2.HttpApi(this, 'HttpApi', {
-            apiName: 'Serverless App HTTP API',
+            apiName: `${props.envName}-ai-api-gateway`,
             createDefaultStage: false,
             corsPreflight: {
                 allowHeaders: ['Authorization', 'Content-Type'],
@@ -83,11 +87,11 @@ export class ServerlessAuthConstruct extends Construct {
         // 明示的にステージを作成し、スロットリング(レート・バースト制限)を適用
         this.stage = new apigwv2.HttpStage(this, 'DefaultStage', {
             httpApi: this.httpApi,
-            stageName: 'prod',
+            stageName: props.envName,
             autoDeploy: true,
             throttle: {
-                rateLimit: 10,
-                burstLimit: 20,
+                rateLimit: props.envName === 'prod' ? 100 : 10,
+                burstLimit: props.envName === 'prod' ? 200 : 20,
             },
         });
     }

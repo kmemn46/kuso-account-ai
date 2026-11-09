@@ -8,6 +8,8 @@ import { Construct } from 'constructs';
 import * as path from 'path';
 
 export interface HenshinApiProps {
+    /** 環境 */
+    envName: string;
     /** CloudFrontのURL (CORS対策) */
     frontendUrl: string;
     userPoolId: string;
@@ -21,11 +23,15 @@ export class HenshinApiConstruct extends Construct {
     constructor(scope: Construct, id: string, props: HenshinApiProps) {
         super(scope, id);
 
+        cdk.Tags.of(this).add('Project', 'HenshinAI');
+        cdk.Tags.of(this).add('AppRole', 'BackendApi');
+
         // =========================================================
         // Lambda 作成: (Bedrock連携)
         // CDKが自動でTypeScriptをビルド＆バンドルしてくれます
         // =========================================================
         const henshinLambda = new NodejsFunction(this, 'HenshinStreamLambda', {
+            functionName: `${props.envName}-henshin-api`,
             runtime: lambda.Runtime.NODEJS_24_X,
             entry: path.join(__dirname, '../../../backend/henshin/index.ts'),
             handler: 'handler',                 // index.ts内の export const handler を指定
@@ -53,7 +59,8 @@ export class HenshinApiConstruct extends Construct {
         });
 
         // Lambda専用のCloudfrontディストリビューションを作成
-        const lambdaDistribution = new cloudfront.Distribution(this, 'LambdaApiDistribution', {
+        const lambdaDistribution = new cloudfront.Distribution(this, 'HenshinDistribution', {
+            comment: `Henshin API Distribution (${props.envName})`,
             defaultBehavior: {
                 origin: origins.FunctionUrlOrigin.withOriginAccessControl(functionUrl),       // OACの設定
                 viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,      // HTTPS強制

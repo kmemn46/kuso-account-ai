@@ -5,6 +5,9 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 
 export interface AiBackendProps {
+    /** 環境 */
+    envName: string;
+    removalPolicy: cdk.RemovalPolicy;
     /** 書き込み・AI処理用Lambdaのソースコードのファイルパス */
     writeLambdaEntryPath: string;
     /** 読み込み用Lambdaのソースコードのファイルパス */
@@ -30,10 +33,11 @@ export class AiBackendConstruct extends Construct {
         // 1. DynamoDBの作成
         // ==========================================
         this.dataTable = new dynamodb.Table(this, 'AiDataTable', {
+            tableName: `${props.envName}-positive-ai-dataTable`,
             partitionKey: { name: 'UserId_Month', type: dynamodb.AttributeType.STRING },
             sortKey: { name: 'TransactionId', type: dynamodb.AttributeType.STRING },
             billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,        // オンデマンド
-            removalPolicy: cdk.RemovalPolicy.DESTROY,                 // 個人開発/検証用に削除しやすく  
+            removalPolicy: props.removalPolicy,
         });
 
         // ==========================================
@@ -42,10 +46,11 @@ export class AiBackendConstruct extends Construct {
         let layers: lambda.ILayerVersion[] = [];
         if (props.layerEntryPath) {
             this.aiLayer = new lambda.LayerVersion(this, 'AiLayer', {
+                layerVersionName: `${props.envName}-positive-ai-dependencies-layer`,
                 code: lambda.Code.fromAsset(props.layerEntryPath),
                 compatibleRuntimes: [lambda.Runtime.PYTHON_3_12],
-                description: 'Shared libraries and modules for backend functions',
-                removalPolicy: cdk.RemovalPolicy.DESTROY, // 検証用
+                description: `Shared libraries and modules for backend functions (${props.envName})`,
+                removalPolicy: cdk.RemovalPolicy.DESTROY,     // Lambdaレイヤーは削除
             });
             layers.push(this.aiLayer);
         }
@@ -54,6 +59,7 @@ export class AiBackendConstruct extends Construct {
         // 3. Lambda 仕訳用作成: (DynamoDB、Bedrock連携)
         // =========================================================
         this.writeLambda = new lambda.Function(this, 'LambdaJournalFunction', {
+            functionName: `${props.envName}-positive-ai-journal`,
             runtime: lambda.Runtime.PYTHON_3_12,
             handler: 'lambda_journal.lambda_handler',
             code: lambda.Code.fromAsset(props.writeLambdaEntryPath),
@@ -69,6 +75,7 @@ export class AiBackendConstruct extends Construct {
         // 4. Lambda 集計用作成: (DynamoDB連携)
         // ==============================================
         this.readLambda = new lambda.Function(this, 'LambdaSummaryFunction', {
+            functionName: `${props.envName}-positive-ai-summary`,
             runtime: lambda.Runtime.PYTHON_3_12,
             handler: 'lambda_summary.lambda_handler',
             code: lambda.Code.fromAsset(props.readLambdaEntryPath),
