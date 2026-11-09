@@ -7,20 +7,30 @@ import * as path from 'path';
 import { PositiveApiConstruct } from './features/positive-api';
 import { HenshinApiConstruct } from './features/henshin-api';
 
+// bin側から受け取るプロパティの型定義
+export interface InfraStackProps extends cdk.StackProps {
+  envName: string;
+  removalPolicy: cdk.RemovalPolicy;
+}
 
 export class InfraStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props: InfraStackProps) {
     super(scope, id, props);
 
     // ==========================================
-    // 1. 共通基盤・不変リソースの定義
+    // 1. 共通基盤の定義
     // ==========================================
     // フロントエンド (S3 + CloudFront (OAC連携))
-    const frontendHosting = new S3CloudFrontConstruct(this, 'FrontendHosting', {});
+    const frontendHosting = new S3CloudFrontConstruct(this, 'FrontendHosting', {
+      envName: props.envName,
+      removalPolicy: props.removalPolicy,
+    });
     const frontendUrl = `https://${frontendHosting.distribution.distributionDomainName}`;
 
     // 認証 (Cognito User Pool と API Gateway)
     const auth = new ServerlessAuthConstruct(this, 'ServerlessAuth', {
+      envName: props.envName,
+      removalPolicy: props.removalPolicy,
       allowedOrigins: [frontendUrl],   // 許可するオリジン
     });
 
@@ -36,18 +46,28 @@ export class InfraStack extends cdk.Stack {
     // 2.【機能追加ゾーン】思いついたクソアプリ機能をここに並べていく
     // =========================================================
     // アプリ1: ポジティブ決算 AI
-    new PositiveApiConstruct(this, 'PositiveApi', {
+    const positiveStack = new PositiveApiConstruct(this, 'PositiveApi', {
+      envName: props.envName,
+      removalPolicy: props.removalPolicy,
       frontendUrl: frontendUrl,
       httpApi: auth.httpApi,
       jwtAuthorizer: auth.jwtAuthorizer,
     });
 
     // アプリ2：変身！ 紙芝居
-    const HenshinApi =  new HenshinApiConstruct(this, 'HenshinApi', {
+    const henshinStack =  new HenshinApiConstruct(this, `HenshinStack-${props.envName}`, {
+      envName: props.envName,
       frontendUrl: frontendUrl,
       userPoolId: auth.userPool.userPoolId,
       userPoolClientId: auth.userPoolClient.userPoolClientId,
     })
+
+    // 環境タグを共通付与する
+    cdk.Tags.of(positiveStack).add('Environment', props.envName);
+    cdk.Tags.of(positiveStack).add('ManagedBy', 'CDK');
+    cdk.Tags.of(henshinStack).add('Environment', props.envName);
+    cdk.Tags.of(henshinStack).add('ManagedBy', 'CDK');
+
     
     // ==========================================
     // 3. 出力設定
@@ -55,33 +75,33 @@ export class InfraStack extends cdk.Stack {
     // CloudFrontのURL(DomainName)
     new cdk.CfnOutput(this, 'CloudFrontURL', {
       value: `https://${frontendHosting.distribution.distributionDomainName}`,
-      description: 'The URL of the Next.js website',
+      description: `The URL of the Next.js website for ${props.envName} environment`,
     });
 
     // CognitoのユーザープールID
     new cdk.CfnOutput(this, 'UserPoolId', {
         value: auth.userPool.userPoolId,
-        description: 'Cognito User Pool ID',
+        description: `Cognito User Pool ID for ${props.envName} environment`,
     });
 
     // CognitoのクライアントID
     new cdk.CfnOutput(this, 'UserPoolClientId', {
         value: auth.userPoolClient.userPoolClientId,
-        description: 'Cognito User Pool Client ID',
+        description: `Cognito User Pool Client ID for ${props.envName} environment`,
     });
 
     // アプリ1用
     // Api Gatewayのエンドポイント
     new cdk.CfnOutput(this, 'HttpApiURL', {
         value: `${auth.httpApi.apiEndpoint}/${auth.stage.stageName}`,
-        description: 'HTTP API Base URL',
+        description: `HTTP API Base URL for ${props.envName} environment`,
     });
 
     // アプリ2用
     // Lambda関数URL (Lambda専用Cloudfrontドメイン名)
     new cdk.CfnOutput(this, 'HenshinLambdaUrl', {
-        value: HenshinApi.lambdaApiUrl,
-        description: 'Henshin Stream Lambda Function URL with CORS',
+        value: henshinStack.lambdaApiUrl,
+        description: `Henshin Stream Lambda Function URL with CORS for ${props.envName} environment`,
     });
   }
 }

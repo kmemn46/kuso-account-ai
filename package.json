@@ -13,6 +13,9 @@
   },
   "scripts": {
     "build:packages": "npm run build --workspaces",
-    "deploy:all": "npm run build:packages && cd infra && npm run build:layer && cdk deploy --outputs-file ../frontend/outputs.json && node generate-env.js && cd ../frontend && npm run build && cd ../infra && cdk deploy"
+    "deploy:all-dev": "npm run build:packages && cd infra && npm run build:layer && cdk deploy -c env=dev --outputs-file ../frontend/outputs.json && node generate-env.js && cd ../frontend && npm run build && cd ../infra && cdk deploy -c env=dev",
+    "deploy:all-prod": "npm run build:packages && cd infra && npm run build:layer && cdk deploy -c env=prod --outputs-file ../frontend/outputs.json && node generate-env.js && cd ../frontend && npm run build && cd ../infra && cdk deploy -c env=prod",
+    "destroy:dev": "cd infra && cdk destroy -c env=dev",
+    "destroy:prod": "cd infra && cdk destroy -c env=prod"
   }
 }
