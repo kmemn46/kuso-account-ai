@@ -4,16 +4,22 @@ import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
 export interface HenshinApiProps {
     /** 環境 */
     envName: string;
+    removalPolicy: cdk.RemovalPolicy;
     /** CloudFrontのURL (CORS対策) */
     frontendUrl: string;
     userPoolId: string;
     userPoolClientId: string;
+    /** BedrockのモデルID */
+    bedrockModelId: string;
+    bedrockImageModelId: string;
 }
 
 export class HenshinApiConstruct extends Construct {
@@ -23,25 +29,64 @@ export class HenshinApiConstruct extends Construct {
     constructor(scope: Construct, id: string, props: HenshinApiProps) {
         super(scope, id);
 
-        cdk.Tags.of(this).add('Project', 'HenshinAI');
-        cdk.Tags.of(this).add('AppRole', 'BackendApi');
+        const {
+            envName,
+            removalPolicy,
+            frontendUrl,
+            userPoolId,
+            userPoolClientId,
+            bedrockModelId,
+            bedrockImageModelId,
+        } = props;
+
+        const functionName = `${envName}-henshin-api`
+        cdk.Tags.of(this).add('AppRole', 'HenshinAI-BackendApi');
 
         // =========================================================
         // Lambda 作成: (Bedrock連携)
         // CDKが自動でTypeScriptをビルド＆バンドルしてくれます
         // =========================================================
+        // SSM Parameter StoreにBedrockのモデルIDを設定
+        // text用
+        const modelIdParam = new ssm.StringParameter(this, 'BedrockModelIdParameter', {
+            parameterName: `/henshin-ai/${envName}/bedrock-model-id`,
+            stringValue: bedrockModelId,
+            description: `Bedrock Model ID for PositiveAI (${envName})`,
+        });
+
+        // image用
+        const imageModelIdParam = new ssm.StringParameter(this, 'BedrockImageModelIdParameter', {
+            parameterName: `/henshin-ai/${envName}/bedrock-image-model-id`,
+            stringValue: bedrockImageModelId,
+            description: `Bedrock Image Model ID for PositiveAI (${envName})`,
+        });
+
+        // ロググループを明示的に作成する
+        const logGroup = new logs.LogGroup(this, 'HenshinLogGroup', {
+            logGroupName: `/aws/lambda/${functionName}`,
+            removalPolicy: removalPolicy,
+            retention: logs.RetentionDays.ONE_WEEK,
+        });
+
         const henshinLambda = new NodejsFunction(this, 'HenshinStreamLambda', {
-            functionName: `${props.envName}-henshin-api`,
+            functionName: functionName,
             runtime: lambda.Runtime.NODEJS_24_X,
             entry: path.join(__dirname, '../../../backend/henshin/index.ts'),
             handler: 'handler',                 // index.ts内の export const handler を指定
             timeout: cdk.Duration.seconds(60),  // ストリーミング用に長めのタイムアウトを設定
+            logGroup: logGroup,
             environment: {
-                USER_POOL_ID: props.userPoolId,
-                CLIENT_ID: props.userPoolClientId,
-                FRONTEND_URL: props.frontendUrl,
+                USER_POOL_ID: userPoolId,
+                CLIENT_ID: userPoolClientId,
+                FRONTEND_URL: frontendUrl,
+                BEDROCK_PARAMETER_NAME: modelIdParam.parameterName,
+                BEDROCK_PARAMETER_NAME_FOR_IMAGE: imageModelIdParam.parameterName,
             }
         });
+
+        // LambdaにSSMパラメータを読む権限を付与する
+        modelIdParam.grantRead(henshinLambda);
+        imageModelIdParam.grantRead(henshinLambda);
 
         // Bedrock呼び出し権限の付与
         henshinLambda.addToRolePolicy(new iam.PolicyStatement ({
@@ -60,7 +105,7 @@ export class HenshinApiConstruct extends Construct {
 
         // Lambda専用のCloudfrontディストリビューションを作成
         const lambdaDistribution = new cloudfront.Distribution(this, 'HenshinDistribution', {
-            comment: `Henshin API Distribution (${props.envName})`,
+            comment: `Henshin API Distribution (${envName})`,
             defaultBehavior: {
                 origin: origins.FunctionUrlOrigin.withOriginAccessControl(functionUrl),       // OACの設定
                 viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,      // HTTPS強制

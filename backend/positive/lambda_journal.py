@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 from langchain_aws import ChatBedrock
 from pydantic import BaseModel, Field
+from aws_lambda_powertools.utilities.parameters import get_parameter
 import boto3
 
 # データ構造（型）をPydanticで定義
@@ -19,11 +20,8 @@ dynamodb = boto3.resource('dynamodb')
 TABLE_NAME = os.environ['TABLE_NAME']
 table = dynamodb.Table(TABLE_NAME)
 
-llm = ChatBedrock(
-    model_id = "us.anthropic.claude-haiku-4-5-20251001-v1:0",
-    model_kwargs = {"temperature": 0.7}
-)
-structured_llm = llm.with_structured_output(JournalEntry)
+# BedrockのモデルID取得用パラメータ名を取得
+BEDROCK_PARAMETER_NAME = os.environ.get("BEDROCK_PARAMETER_NAME", "")
 
 # CloudFrontのURLを取得
 CLOUDFRONT_URL = os.environ.get("CLOUDFRONT_URL", "*")
@@ -56,6 +54,16 @@ def lambda_handler(event, context):
         pk = f"{user_id}#{current_month}"
 
         # BedrockでAI仕訳
+        model_id = get_parameter(BEDROCK_PARAMETER_NAME, max_age=300)
+        print(f"Using Bedrock Model ID: {model_id}")
+        
+        llm = ChatBedrock(
+             model_id = model_id,
+             model_kwargs = {"temperature": 0.7}
+             )
+        
+        structured_llm = llm.with_structured_output(JournalEntry)
+
         prompt = f"""
         あなたは令和の最強ギャル簿記アナリストです。
         ユーザーの出来事を無理やり複式簿記（借方・貸方）に仕訳してください。

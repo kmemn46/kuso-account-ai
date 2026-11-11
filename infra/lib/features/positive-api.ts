@@ -10,20 +10,31 @@ export interface PositiveApiProps {
     /** 環境 */
     envName: string;
     removalPolicy: cdk.RemovalPolicy;
+
     /** CloudFrontのURL (CORS対策) */
     frontendUrl: string;
     /** API Gateway（HTTP API）*/
     httpApi: apiGwV2.HttpApi;
     /** HTTP API用のJWTオーソライザー */
     jwtAuthorizer: apiGwV2Authorizers.HttpJwtAuthorizer;
+    /** BedrockのモデルID */
+    bedrockModelId: string;
 }
 
 export class PositiveApiConstruct extends Construct {
     constructor(scope: Construct, id: string, props: PositiveApiProps) {
       super(scope, id);
 
-      cdk.Tags.of(this).add('Project', 'PositiveAI');
-      cdk.Tags.of(this).add('AppRole', 'BackendApi');
+      const {
+        envName,
+        removalPolicy,
+        frontendUrl,
+        httpApi,
+        jwtAuthorizer,
+        bedrockModelId,
+      } = props;
+
+      cdk.Tags.of(this).add('AppRole', 'PositiveAI-BackendApi');
 
       // =======================================================================
       // 1. バックエンド部分 (Lambda 仕訳用、集計用: Bedrock、DynamoDB作成と連携)
@@ -33,34 +44,35 @@ export class PositiveApiConstruct extends Construct {
       const layerEntryPath = path.join(__dirname, '../../../backend/layers/common-layer');
       
       const aiBackend = new AiBackendConstruct(this, 'AiBackend', {
-        envName: props.envName,
-        removalPolicy: props.removalPolicy,
+        envName: envName,
+        removalPolicy: removalPolicy,
         writeLambdaEntryPath: lamndaEntryPath,
         readLambdaEntryPath: lamndaEntryPath,
         layerEntryPath: layerEntryPath,
-        frontendUrl: props.frontendUrl, // CORS対策
+        frontendUrl: frontendUrl, // CORS対策
+        bedrockModelId: bedrockModelId,
       });
 
       // ルートの設定 /journal (POST)
-      props.httpApi.addRoutes({
+      httpApi.addRoutes({
         path: '/journal',
         methods: [apiGwV2.HttpMethod.POST],
         integration: new apiGwV2Integrations.HttpLambdaIntegration(
           'JournalIntegration',
           aiBackend.writeLambda
         ),
-        authorizer: props.jwtAuthorizer,  // Cognitoの認証
+        authorizer: jwtAuthorizer,  // Cognitoの認証
       });
 
       // ルートの設定 /summary (GET)
-      props.httpApi.addRoutes({
+      httpApi.addRoutes({
         path: '/summary',
         methods: [apiGwV2.HttpMethod.GET],
         integration: new apiGwV2Integrations.HttpLambdaIntegration(
           'SummaryIntegration',
           aiBackend.readLambda
         ),
-        authorizer: props.jwtAuthorizer, // Cognitoの認証
+        authorizer: jwtAuthorizer, // Cognitoの認証
       });
 
     }
