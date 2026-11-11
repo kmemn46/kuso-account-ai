@@ -1,4 +1,5 @@
 import { BedrockRuntimeClient, InvokeModelCommand, InvokeModelWithResponseStreamCommand } from '@aws-sdk/client-bedrock-runtime';
+import { getParameter } from '@aws-lambda-powertools/parameters/ssm';
 import { CognitoJwtVerifier } from 'aws-jwt-verify';
 import { APIGatewayProxyEventV2, Context } from 'aws-lambda';
 
@@ -15,6 +16,9 @@ declare const awsLambda: {
 const USER_POOL_ID = process.env.USER_POOL_ID || 'us-east-1_xxxxxxxxx';
 const CLIENT_ID = process.env.CLIENT_ID || 'your-client-id';
 const FRONTEND_URL = process.env.FRONTEND_URL || '*';
+const BEDROCK_PARAMETER_NAME = process.env.BEDROCK_PARAMETER_NAME || '';
+const BEDROCK_PARAMETER_NAME_FOR_IMAGE = process.env.BEDROCK_PARAMETER_NAME_FOR_IMAGE || '';
+
 
 // aws-jwt-verify を使った Cognito 用バリデータの初期化
 const jwtVerifier = CognitoJwtVerifier.create({
@@ -108,8 +112,12 @@ export const handler = awslambda.streamifyResponse(
                 messages: [{ role: "user", content: prompt }],
             };
 
+            // 自動キャッシュ付きでモデルIDを取得（取得後5分間はキャッシュを利用）
+            const modelId = await getParameter(BEDROCK_PARAMETER_NAME, { maxAge: 300 });
+            console.log(`Using Bedrock Model ID: ${modelId}`);
+
             const command = new InvokeModelWithResponseStreamCommand({
-                modelId: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+                modelId: modelId,
                 contentType: "application/json",
                 accept: "application/json",
                 body: JSON.stringify(payload),
@@ -194,7 +202,8 @@ export const handler = awslambda.streamifyResponse(
 // Stable Image Core を呼び出してBase64画像を返す関数
 async function generateImageWithStableCore(promptText: string): Promise<string> {
 
-    const modelId = "stability.stable-image-core-v1:1";
+    const modelId = await getParameter(BEDROCK_PARAMETER_NAME_FOR_IMAGE, { maxAge: 300 });
+    console.log(`Using Bedrock Image Model ID: ${modelId}`);
 
     const payload = {
         prompt: promptText,

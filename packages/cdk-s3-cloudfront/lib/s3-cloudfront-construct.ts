@@ -18,21 +18,23 @@ export class S3CloudFrontConstruct extends Construct {
     constructor(scope: Construct, id: string, props: S3CloudFrontProps) {
         super(scope, id);
 
+        const { envName, removalPolicy } = props;
+
         // ==========================================
         // 1. 静的ファイル保存用S3バケットの作成
         // ==========================================
         this.bucket = new s3.Bucket(this, 'NextjsWebsiteBucket', {
-            bucketName: `${props.envName}-my-ai-app-data-bucket`,
+            bucketName: `${envName}-my-ai-app-data-bucket`,
             blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,  // Public Access遮断
-            removalPolicy: props.removalPolicy,
-            autoDeleteObjects: props.removalPolicy === cdk.RemovalPolicy.DESTROY,  // スタック削除時に中身も削除（devの場合）
+            removalPolicy: removalPolicy,
+            autoDeleteObjects: removalPolicy === cdk.RemovalPolicy.DESTROY,  // スタック削除時に中身も削除（devの場合）
         });
 
         // ======================================================
         // 2. CloudFrontディストリビューションの作成（S3とOACで連携）
         // ======================================================
         this.distribution = new cloudfront.Distribution(this, 'NextjsDistribution', {
-            comment: `Nextjs Distribution (${props.envName})`,
+            comment: `Nextjs Distribution (${envName})`,
             defaultBehavior: {
                 origin: origins.S3BucketOrigin.withOriginAccessControl(this.bucket),       // OACの設定
                 viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,   // HTTPS強制

@@ -31,11 +31,13 @@ export class ServerlessAuthConstruct extends Construct {
     constructor(scope: Construct, id: string, props: ServerlessAuthProps) {
         super(scope, id);
 
+        const { envName, removalPolicy, allowedOrigins } = props;
+
         // ==================================================
         // 1. Cognito User Poolの作成
         // ==================================================
         this.userPool = new cognito.UserPool(this, 'UserPool', {
-            userPoolName: `${props.envName}-user-pool`,
+            userPoolName: `${envName}-user-pool`,
             selfSignUpEnabled: true,      // 自分でサインアップ可能
             signInCaseSensitive: false,
             signInAliases: {
@@ -46,12 +48,12 @@ export class ServerlessAuthConstruct extends Construct {
             standardAttributes: {
                 email: { required: true, mutable: true}
             },
-            removalPolicy: props.removalPolicy,  // 開発用：スタック削除時にプールも削除される設定
+            removalPolicy: removalPolicy,  // 開発用：スタック削除時にプールも削除される設定
         });
 
         // User Pool Clientの作成
         this.userPoolClient = this.userPool.addClient('UserPoolClient', {
-            userPoolClientName: `${props.envName}-user-pool-client`,
+            userPoolClientName: `${envName}-user-pool-client`,
             generateSecret: false,   // クライアントシークレットは不要
         });
 
@@ -71,7 +73,7 @@ export class ServerlessAuthConstruct extends Construct {
         // 2. API Gatewayの作成 (HTTP API)
         // ==========================================
         this.httpApi = new apigwv2.HttpApi(this, 'HttpApi', {
-            apiName: `${props.envName}-ai-api-gateway`,
+            apiName: `${envName}-ai-api-gateway`,
             createDefaultStage: false,
             corsPreflight: {
                 allowHeaders: ['Authorization', 'Content-Type'],
@@ -80,18 +82,18 @@ export class ServerlessAuthConstruct extends Construct {
                     apigwv2.CorsHttpMethod.POST,
                     apigwv2.CorsHttpMethod.OPTIONS,
                 ],
-                allowOrigins: props.allowedOrigins,
+                allowOrigins: allowedOrigins,
             },
         });
 
         // 明示的にステージを作成し、スロットリング(レート・バースト制限)を適用
         this.stage = new apigwv2.HttpStage(this, 'DefaultStage', {
             httpApi: this.httpApi,
-            stageName: props.envName,
+            stageName: envName,
             autoDeploy: true,
             throttle: {
-                rateLimit: props.envName === 'prod' ? 100 : 10,
-                burstLimit: props.envName === 'prod' ? 200 : 20,
+                rateLimit: envName === 'prod' ? 100 : 10,
+                burstLimit: envName === 'prod' ? 200 : 20,
             },
         });
     }
