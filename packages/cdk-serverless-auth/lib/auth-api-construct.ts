@@ -46,7 +46,7 @@ export class ServerlessAuthConstruct extends Construct {
             },
             autoVerify: { email: true },  // メールアドレス確認を有効化
             standardAttributes: {
-                email: { required: true, mutable: true}
+                email: { required: true, mutable: true }
             },
             removalPolicy: removalPolicy,  // 開発用：スタック削除時にプールも削除される設定
         });
@@ -80,6 +80,7 @@ export class ServerlessAuthConstruct extends Construct {
                 allowMethods: [
                     apigwv2.CorsHttpMethod.GET,
                     apigwv2.CorsHttpMethod.POST,
+                    apigwv2.CorsHttpMethod.DELETE,
                     apigwv2.CorsHttpMethod.OPTIONS,
                 ],
                 allowOrigins: allowedOrigins,

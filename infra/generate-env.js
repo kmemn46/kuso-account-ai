@@ -39,6 +39,7 @@ try {
   const userPoolId = stackOutputs.UserPoolId || '';
   const userPoolClientId = stackOutputs.UserPoolClientId || '';
   const HenshinLambdaUrl = stackOutputs.HenshinLambdaUrl || '';
+  const ChatLambdaUrl = stackOutputs.ChatLambdaUrl || '';
 
   // .env.local に正しいURL形式で書き出す
   const envContent = `
@@ -46,6 +47,7 @@ try {
   NEXT_PUBLIC_USER_POOL_ID=${userPoolId}
   NEXT_PUBLIC_USER_POOL_CLIENT_ID=${userPoolClientId}
   NEXT_PUBLIC_HENSHIN_LAMBDA_CLOUDFRONT_URL=${HenshinLambdaUrl}
+  NEXT_PUBLIC_CHAT_LAMBDA_CLOUDFRONT_URL=${ChatLambdaUrl}
   `.trim();
 
   fs.writeFileSync(envPath, envContent, 'utf8');
