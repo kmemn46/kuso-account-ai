@@ -6,6 +6,7 @@ import { Construct } from 'constructs';
 import * as path from 'path';
 import { PositiveApiConstruct } from './features/positive-api';
 import { HenshinApiConstruct } from './features/henshin-api';
+import { ChatApiConstruct } from './features/chat-api';
 
 // bin側(大元)から受け取るプロパティの型定義
 export interface InfraStackProps extends cdk.StackProps {
@@ -66,7 +67,7 @@ export class InfraStack extends cdk.Stack {
     });
 
     // アプリ2：変身！ 紙芝居
-    const henshinStack =  new HenshinApiConstruct(this, `HenshinStack-${envName}`, {
+    const henshinStack = new HenshinApiConstruct(this, `HenshinStack-${envName}`, {
       envName: envName,
       removalPolicy: removalPolicy,
       frontendUrl: frontendUrl,
@@ -74,8 +75,21 @@ export class InfraStack extends cdk.Stack {
       userPoolClientId: auth.userPoolClient.userPoolClientId,
       bedrockModelId: bedrockModelId,
       bedrockImageModelId: bedrockImageModelId,
-    })
-    
+    });
+
+    //  アプリ3:会話履歴付きチャット
+    const chatStack = new ChatApiConstruct(this, `ChatStack-${envName}`, {
+      envName: envName,
+      removalPolicy: removalPolicy,
+      bedrockModelId: bedrockModelId,
+      frontendUrl: frontendUrl,
+      httpApi: auth.httpApi,
+      jwtAuthorizer: auth.jwtAuthorizer,
+      userPoolId: auth.userPool.userPoolId,
+      userPoolClientId: auth.userPoolClient.userPoolClientId,
+    });
+
+
     // ==========================================
     // 3. 出力設定
     // ==========================================
@@ -87,28 +101,41 @@ export class InfraStack extends cdk.Stack {
 
     // CognitoのユーザープールID
     new cdk.CfnOutput(this, 'UserPoolId', {
-        value: auth.userPool.userPoolId,
-        description: `Cognito User Pool ID for ${envName} environment`,
+      value: auth.userPool.userPoolId,
+      description: `Cognito User Pool ID for ${envName} environment`,
     });
 
     // CognitoのクライアントID
     new cdk.CfnOutput(this, 'UserPoolClientId', {
-        value: auth.userPoolClient.userPoolClientId,
-        description: `Cognito User Pool Client ID for ${envName} environment`,
+      value: auth.userPoolClient.userPoolClientId,
+      description: `Cognito User Pool Client ID for ${envName} environment`,
     });
 
     // アプリ1用
     // Api Gatewayのエンドポイント
     new cdk.CfnOutput(this, 'HttpApiURL', {
-        value: `${auth.httpApi.apiEndpoint}/${auth.stage.stageName}`,
-        description: `HTTP API Base URL for ${envName} environment`,
+      value: `${auth.httpApi.apiEndpoint}/${auth.stage.stageName}`,
+      description: `HTTP API Base URL for ${envName} environment`,
     });
 
     // アプリ2用
     // Lambda関数URL (Lambda専用Cloudfrontドメイン名)
     new cdk.CfnOutput(this, 'HenshinLambdaUrl', {
-        value: henshinStack.lambdaApiUrl,
-        description: `Henshin Stream Lambda Function URL with CORS for ${envName} environment`,
+      value: henshinStack.lambdaApiUrl,
+      description: `Henshin Stream Lambda Function URL with CORS for ${envName} environment`,
+    });
+
+    // アプリ3用
+    // Lambda関数URL (Lambda専用Cloudfrontドメイン名)
+    new cdk.CfnOutput(this, 'ChatLambdaUrl', {
+      value: chatStack.lambdaApiUrl,
+      description: `Chat Stream Lambda Function URL with CORS for ${envName} environment`,
+    });
+
+    // Api Gatewayのエンドポイント
+    new cdk.CfnOutput(this, 'HttpApiURL', {
+      value: `${auth.httpApi.apiEndpoint}/${auth.stage.stageName}`,
+      description: `Chat HTTP API Base URL for ${envName} environment`,
     });
   }
 }

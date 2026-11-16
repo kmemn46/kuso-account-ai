@@ -22,16 +22,16 @@ const kusoApps: KusoApp[] = [
     {
         id: 'app-2',
         title: '蒸着せよ！',
-        description: 'なんでも蒸着させます！ 蒸着プロセスをデジタル紙芝居と共にお送りします。',
-        emoji: '🏃‍♂️',
+        description: 'なんでも蒸着させます！ 蒸着プロセスをデジタル紙芝居と共に熱いナレーションと共にお送りします。',
+        emoji: '🤖⚡',
         path: '/apps/henshin',
     },
     {
         id: 'app-3',
-        title: '企画検討中・・・',
-        description: '',
-        emoji: '⏳',
-        path: '/apps/nothing',
+        title: 'AIチャットアシスタント',
+        description: '過去の文脈を踏まえた連続的な対話ができる実用的なAIチャットです。',
+        emoji: '💬✨',
+        path: '/apps/chat',
     },
 ];
 
@@ -49,10 +49,10 @@ export default function ThemeParkHome() {
             </div>
             {/* アプリ一覧カードグリッド */}
             <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
-                { kusoApps.map((app) => (
+                {kusoApps.map((app) => (
                     <div
-                    key={app.id}
-                    className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 shadow-xl hover:scale-105 transition-transform duration-300 flex flex-col justify-between">
+                        key={app.id}
+                        className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 shadow-xl hover:scale-105 transition-transform duration-300 flex flex-col justify-between">
                         <div>
                             <div className="text-4xl mb-4">{app.emoji}</div>
                             <h2 className="text-2xl font-bold mb-2 text-yellow-200">{app.title}</h2>
