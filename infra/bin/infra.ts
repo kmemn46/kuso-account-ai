@@ -1,12 +1,18 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib/core';
 import { InfraStack, InfraStackProps } from '../lib/infra-stack';
+import { GitHubOidcStack } from '../lib/github-oidc-stack';
 
 const app = new cdk.App();
 
 // コンテキストから環境名を取得（デフォルトはdev）
 const rawEnvKey = app.node.tryGetContext('env') || 'dev';
 const envKey = rawEnvKey as 'dev' | 'prod';
+
+const env = {
+  account: process.env.CDK_DEFAULT_ACCOUNT,
+  region: process.env.CDK_DEFAULT_REGION,
+}
 
 // 環境ごとの個別設定
 const envConfig = {
@@ -32,10 +38,7 @@ const props: InfraStackProps = {
   envName: envConfig[envKey].envName,
   removalPolicy: envConfig[envKey].removalPolicy,
   bedrockModelIds: envConfig[envKey].bedrockModelIds,
-  env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION,
-  },
+  env,
   tags: {
     Environment: envConfig[envKey].envName,
     Project: 'Kuso-App-Park',
@@ -43,7 +46,16 @@ const props: InfraStackProps = {
   },
 }
 
+// アプリ用スタック
 new InfraStack(app, `InfraStack-${envConfig[envKey].envName}`, props);
+
+// GitHub Actions + OIDC 用スタック
+new GitHubOidcStack(app, 'GitHubOidcStack', {
+  env,
+  githubOrg: 'YOUR_GITHUB_ORG_OR_USER', // GitHubユーザー名またはOrg名に変更
+  githubRepo: 'YOUR_REPO_NAME',         // リポジトリ名に変更
+  branchName: "main",                   // mainブランチからのデプロイに限定する場合
+});
 
 //new InfraStack(app, `InfraStack-${envConfig[envKey].envName}`, {
 /* If you don't specify 'env', this stack will be environment-agnostic.

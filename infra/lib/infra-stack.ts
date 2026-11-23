@@ -111,7 +111,7 @@ export class InfraStack extends cdk.Stack {
       description: `Cognito User Pool Client ID for ${envName} environment`,
     });
 
-    // アプリ1用
+    // アプリ1、3用
     // Api Gatewayのエンドポイント
     new cdk.CfnOutput(this, 'HttpApiURL', {
       value: `${auth.httpApi.apiEndpoint}/${auth.stage.stageName}`,
@@ -130,12 +130,6 @@ export class InfraStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'ChatLambdaUrl', {
       value: chatStack.lambdaApiUrl,
       description: `Chat Stream Lambda Function URL with CORS for ${envName} environment`,
-    });
-
-    // Api Gatewayのエンドポイント
-    new cdk.CfnOutput(this, 'HttpApiURL', {
-      value: `${auth.httpApi.apiEndpoint}/${auth.stage.stageName}`,
-      description: `Chat HTTP API Base URL for ${envName} environment`,
     });
   }
 }
