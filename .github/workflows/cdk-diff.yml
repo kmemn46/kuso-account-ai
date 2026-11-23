@@ -69,60 +69,61 @@ jobs:
           REPO: ${{ github.repository }}
           EXIT_CODE: ${{ steps.diff.outputs.exit_code }}
         run: |
-          node -e '
-            const fs = require("fs");
-            const { execSync } = require("child_process");
+          node << 'EOF'
+          const fs = require("fs");
+          const { execSync } = require("child_process");
 
-            const rawDiff = fs.existsSync("infra/diff-output.txt")
-              ? fs.readFileSync("infra/diff-output.txt", "utf8")
-              : "";
+          const rawDiff = fs.existsSync("infra/diff-output.txt")
+            ? fs.readFileSync("infra/diff-output.txt", "utf8")
+            : "";
 
-            // ターミナル用の色コード（ANSIエスケープシーケンス）を取り除いて読みやすくする
-            const cleanDiff = rawDiff.replace(/\u001b\[[0-9;]*m/g, "").trim() || "No diff output.";
+          // ターミナル用の色コード（ANSIエスケープシーケンス）を取り除く
+          const cleanDiff = rawDiff.replace(/\u001b\[[0-9;]*m/g, "").trim() || "No diff output.";
 
-            // GitHub コメントの文字数制限対策として長すぎる場合は切り詰める
-            const maxLength = 60000;
-            const truncatedDiff = cleanDiff.length > maxLength
-              ? cleanDiff.slice(0, maxLength) + "\n... (出力が長いため一部を省略しました)"
-              : cleanDiff;
+          // GitHub コメントの文字数制限対策
+          const maxLength = 60000;
+          const truncatedDiff = cleanDiff.length > maxLength
+            ? cleanDiff.slice(0, maxLength) + "\n... (出力が長いため一部を省略しました)"
+            : cleanDiff;
 
-            // 同じ PR で更新されたときに既存コメントを書き換えるための目印
-            const marker = "<!-- cdk-diff-infra-stack-dev -->";
-            const statusText = process.env.EXIT_CODE === "0" ? "Success" : "Exited with non-zero";
+          // 既存コメントを更新するための目印
+          const marker = "<!-- cdk-diff-infra-stack-dev -->";
+          const statusText = process.env.EXIT_CODE === "0" ? "Success" : "Exited with non-zero";
 
-            const body = [
-              marker,
-              "### 🔍 CDK Diff (`InfraStack-dev` / `env=dev`)",
-              "",
-              `Status: **${statusText}**`,
-              "",
-              "<details>",
-              "<summary>クリックして cdk diff の詳細を表示</summary>",
-              "",
-              "```diff",
-              truncatedDiff,
-              "```",
-              "",
-              "</details>"
-            ].join("\n");
+          const body = [
+            marker,
+            "### 🔍 CDK Diff (`InfraStack-dev` / `env=dev`)",
+            "",
+            `Status: **${statusText}**`,
+            "",
+            "<details>",
+            "<summary>クリックして cdk diff の詳細を表示</summary>",
+            "",
+            "```diff",
+            truncatedDiff,
+            "```",
+            "",
+            "</details>"
+          ].join("\n");
 
-            fs.writeFileSync("comment-body.md", body);
+          fs.writeFileSync("comment-body.md", body);
 
-            const listJson = execSync(
-              `gh api repos/${process.env.REPO}/issues/${process.env.PR_NUMBER}/comments`,
-              { encoding: "utf8" }
+          const listJson = execSync(
+            `gh api repos/${process.env.REPO}/issues/${process.env.PR_NUMBER}/comments`,
+            { encoding: "utf8" }
+          );
+          const comments = JSON.parse(listJson);
+          const existing = comments.find((c) => c.body && c.body.includes(marker));
+
+          if (existing) {
+            execSync(
+              `gh api --method PATCH repos/${process.env.REPO}/issues/comments/${existing.id} -F body=@comment-body.md`,
+              { stdio: "inherit" }
             );
-            const comments = JSON.parse(listJson);
-            const existing = comments.find((c) => c.body && c.body.includes(marker));
-
-            if (existing) {
-              execSync(
-                `gh api --method PATCH repos/${process.env.REPO}/issues/comments/${existing.id} -F body=@comment-body.md`,
-                { stdio: "inherit" }
-              );
-            } else {
-              execSync(
-                `gh pr comment ${process.env.PR_NUMBER} --body-file comment-body.md`,
-                { stdio: "inherit" }
-              );
-            }
+          } else {
+            execSync(
+              `gh pr comment ${process.env.PR_NUMBER} --body-file comment-body.md`,
+              { stdio: "inherit" }
+            );
+          }
+          EOF
