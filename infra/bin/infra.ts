@@ -52,9 +52,8 @@ new InfraStack(app, `InfraStack-${envConfig[envKey].envName}`, props);
 // GitHub Actions + OIDC 用スタック
 new GitHubOidcStack(app, 'GitHubOidcStack', {
   env,
-  githubOrg: 'YOUR_GITHUB_ORG_OR_USER', // GitHubユーザー名またはOrg名に変更
-  githubRepo: 'YOUR_REPO_NAME',         // リポジトリ名に変更
-  branchName: "main",                   // mainブランチからのデプロイに限定する場合
+  githubRepoSubjectPrefix: "<ユーザ名>@数値/<レポジトリ名>@数値",
+  roleNamePrefix: "<レポジトリ名>",
 });
 
 //new InfraStack(app, `InfraStack-${envConfig[envKey].envName}`, {
