@@ -1,45 +1,34 @@
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+const { execSync } = require('node:child_process');
+const fs = require("node:fs");
+const path = require("node:path");
 
 console.log('Lambdaレイヤー用のパッケージを準備しています...');
 
 // レイヤー用の出力先ディレクトリ
 const layerPythonDir = path.join(__dirname, '../backend/layers/common-layer/python');
-const winPath = path.win32.normalize(layerPythonDir);
 
 // 既存のレイヤー用フォルダが存在する場合は、中身ごと一度きれいスッキリ削除
-if (fs.existsSync(winPath)) {
-  try {
-    console.log('古いレイヤーフォルダをクリーンアップ中...');
-    execSync(`del /q /f /s "${winPath}\\*"` , { stdio: 'ignore' });
-    execSync(`rmdir /s /q "${winPath}"`, { stdio: 'ignore' });
-  } catch (error) {
-    // 万が一のWindowsの一時的なロック対策として、最低限のフォルダ担保
-    if (!fs.existsSync(winPath)) {
-      fs.mkdirSync(winPath, { recursive: true });
-    }
-  }
-} else {
-  // --- 存在しない場合：フォルダを作成 ---
-  fs.mkdirSync(winPath, { recursive: true });
+if (fs.existsSync(layerPythonDir)) {
+  console.log(`既存のフォルダを削除中: ${layerPythonDir}`);
+  fs.rmSync(layerPythonDir, { recursive: true, force: true });
 }
+
+// 存在しない場合はフォルダを作成（親も含めて再帰作成）
+console.log(`フォルダを作成中: ${layerPythonDir}`);
+fs.mkdirSync(layerPythonDir, { recursive: true });
 
 // requirements.txtで指定したパッケージをインストール
 const requirementsPath = path.join(__dirname, '../backend/requirements.txt');
-const reqPath = path.win32.normalize(requirementsPath);
 
-if (fs.existsSync(reqPath)) {
+if (fs.existsSync(requirementsPath)) {
   console.log('Lambda向けLinuxバイナリのインストールを開始します...');
 
   try {
-    // Windowsのロングパス対策
-    const extendedWinPath = winPath.startsWith('\\\\?\\') ? winPath : `\\\\?\\${winPath}`;
 
     const pipCmd = [
       'pip install',
-      `-r "${reqPath}"`,
-      `-t "${extendedWinPath}"`,
+      `-r "${requirementsPath}"`,
+      `-t "${layerPythonDir}"`,
       '--no-cache-dir',
       '--platform manylinux2014_x86_64',
       '--python-version 3.12',
@@ -54,7 +43,7 @@ if (fs.existsSync(reqPath)) {
   } catch (pipError) {
     console.error('pip install 中にエラーが発生しました:', pipError.message);
     process.exit(1);
-  }  
+  }
 } else {
   console.log('requirements.txt が見つからないため、pip install をスキップします。');
 }

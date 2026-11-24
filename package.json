@@ -12,10 +12,10 @@
     "typescript": "^5"
   },
   "scripts": {
-    "build:packages": "npm run build --workspaces",
-    "deploy:all-dev": "npm run build:packages && cd infra && npm run build:layer && cdk deploy -c env=dev --outputs-file ../frontend/outputs.json && node generate-env.js && cd ../frontend && npm run build && cd ../infra && cdk deploy -c env=dev",
-    "deploy:all-prod": "npm run build:packages && cd infra && npm run build:layer && cdk deploy -c env=prod --outputs-file ../frontend/outputs.json && node generate-env.js && cd ../frontend && npm run build && cd ../infra && cdk deploy -c env=prod",
-    "destroy:dev": "cd infra && cdk destroy -c env=dev",
-    "destroy:prod": "cd infra && cdk destroy -c env=prod"
+    "build:packages": "npm run build -w cdk-ai-backend && npm run build -w cdk-s3-cloudfront && npm run build -w cdk-serverless-auth && npm run build -w infra",
+    "deploy:all-dev": "npm run build:packages && cd infra && npm run build:layer && cdk deploy InfraStack-dev -c env=dev --outputs-file ../frontend/outputs.json && node generate-env.js && cd ../frontend && npm run build && cd ../infra && cdk deploy InfraStack-dev -c env=dev",
+    "deploy:all-prod": "npm run build:packages && cd infra && npm run build:layer && cdk deploy InfraStack-prod -c env=prod --outputs-file ../frontend/outputs.json && node generate-env.js && cd ../frontend && npm run build && cd ../infra && cdk deploy InfraStack-prod -c env=prod",
+    "destroy:dev": "cd infra && cdk destroy InfraStack-dev -c env=dev",
+    "destroy:prod": "cd infra && cdk destroy InfraStack-prod -c env=prod"
   }
 }

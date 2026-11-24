@@ -1,0 +1,85 @@
+name: Deploy InfraStack via OIDC
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # リポジトリのコードを取得
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      
+      # タグ（v*）なら prod、main ブランチへのプッシュ/マージなら dev にする
+      - name: Determine target environment
+        id: set_env
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "env_name=prod" >> "$GITHUB_OUTPUT"
+          else
+            echo "env_name=dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Node.jsのセットアップ
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      # AWS OIDC認証（一時的な認証情報の取得）
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1  # デプロイ先のリージョン
+
+      # ルートで全ワークスペースの依存関係をインストール
+      - name: Install workspace dependencies
+        run: npm ci
+
+      # 全ワークスペースをビルド
+      - name: Build packages
+        run: npm run build:packages
+
+      # infra で Lambda レイヤーをビルド
+      - name: Build Lambda layer
+        working-directory: infra
+        run: npm run build:layer
+      
+      # 1回目の cdk deploy（../frontend/outputs.json を出力）
+      - name: First CDK deploy and output JSON
+        working-directory: infra
+        run: |
+          ENV_NAME="${{ steps.set_env.outputs.env_name }}"
+          STACK_NAME="InfraStack-${ENV_NAME}"
+          npx cdk deploy "${STACK_NAME}" -c "env=${ENV_NAME}" --outputs-file ../frontend/outputs.json --require-approval never
+
+      # infra/generate-env.js を実行して .env を生成
+      - name: Generate env file
+        working-directory: infra
+        run: node generate-env.js
+
+      # frontend をビルド
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      # 2回目の cdk deploy
+      - name: Second CDK deploy
+        working-directory: infra
+        run: |
+          ENV_NAME="${{ steps.set_env.outputs.env_name }}"
+          STACK_NAME="InfraStack-${ENV_NAME}"
+          npx cdk deploy "${STACK_NAME}" -c "env=${ENV_NAME}" --require-approval never
+          
