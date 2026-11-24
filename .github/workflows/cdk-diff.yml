@@ -43,7 +43,7 @@ jobs:
       - name: Install workspace dependencies
         run: npm ci
       
-      # パッケージと Lambda レイヤーをビルド（正確な diff 取得のため）
+      # パッケージと Lambda レイヤーをビルド
       - name: Build packages and Lambda layer
         run: |
           npm run build:packages
