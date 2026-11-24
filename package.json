@@ -4,6 +4,7 @@
   "workspaces": [
     "infra",
     "packages/*",
+    "backend/*",
     "frontend"
   ],
   "devDependencies": {

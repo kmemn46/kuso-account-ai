@@ -39,6 +39,7 @@ export class HenshinApiConstruct extends Construct {
             bedrockImageModelId,
         } = props;
 
+        const rootLockFile = path.join(__dirname, '../../../package-lock.json');
         const functionName = `${envName}-henshin-api`
         cdk.Tags.of(this).add('AppRole', 'HenshinAI-BackendApi');
 
@@ -72,6 +73,7 @@ export class HenshinApiConstruct extends Construct {
             functionName: functionName,
             runtime: lambda.Runtime.NODEJS_24_X,
             entry: path.join(__dirname, '../../../backend/henshin/index.ts'),
+            depsLockFilePath: rootLockFile,
             handler: 'handler',                 // index.ts内の export const handler を指定
             timeout: cdk.Duration.seconds(60),  // ストリーミング用に長めのタイムアウトを設定
             logGroup: logGroup,
@@ -89,7 +91,7 @@ export class HenshinApiConstruct extends Construct {
         imageModelIdParam.grantRead(henshinLambda);
 
         // Bedrock呼び出し権限の付与
-        henshinLambda.addToRolePolicy(new iam.PolicyStatement ({
+        henshinLambda.addToRolePolicy(new iam.PolicyStatement({
             actions: [
                 'bedrock:InvokeModelWithResponseStream',
                 'bedrock:InvokeModel',
