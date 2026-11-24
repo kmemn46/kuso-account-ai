@@ -49,6 +49,8 @@ export class ChatApiConstruct extends Construct {
             bedrockModelId,
         } = props;
 
+        const rootLockFile = path.join(__dirname, '../../../package-lock.json');
+
         // ============================================
         // DynamoDBテーブルの作成（GSIとTTL付き）
         // ============================================ 
@@ -111,6 +113,7 @@ export class ChatApiConstruct extends Construct {
             functionName: functionName,
             runtime: lambda.Runtime.NODEJS_24_X,
             entry: path.join(__dirname, '../../../backend/chat/index.ts'),
+            depsLockFilePath: rootLockFile,
             handler: 'handler',
             timeout: cdk.Duration.seconds(60),
             logGroup: logGroup,
@@ -173,6 +176,7 @@ export class ChatApiConstruct extends Construct {
             functionName: functionSessions,
             runtime: lambda.Runtime.NODEJS_24_X,
             entry: path.join(__dirname, '../../../backend/sessions/index.ts'),
+            depsLockFilePath: rootLockFile,
             handler: 'handler',
             timeout: cdk.Duration.seconds(30),
             logGroup: logGroupSessions,
@@ -213,6 +217,7 @@ export class ChatApiConstruct extends Construct {
             functionName: functionHistory,
             runtime: lambda.Runtime.NODEJS_24_X,
             entry: path.join(__dirname, '../../../backend/history/index.ts'),
+            depsLockFilePath: rootLockFile,
             handler: 'handler',
             timeout: cdk.Duration.seconds(30),
             logGroup: logGroupHistory,
@@ -253,6 +258,7 @@ export class ChatApiConstruct extends Construct {
             functionName: functionDeleteSession,
             runtime: lambda.Runtime.NODEJS_24_X,
             entry: path.join(__dirname, '../../../backend/delete-session/index.ts'),
+            depsLockFilePath: rootLockFile,
             handler: 'handler',
             timeout: cdk.Duration.seconds(30),
             logGroup: logGroupDeleteSession,
