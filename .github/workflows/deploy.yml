@@ -18,7 +18,7 @@ jobs:
     steps:
       # リポジトリのコードを取得
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       
       # タグ（v*）なら prod、main ブランチへのプッシュ/マージなら dev にする
       - name: Determine target environment
@@ -32,14 +32,14 @@ jobs:
 
       # Node.jsのセットアップ
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: "npm"
 
       # AWS OIDC認証（一時的な認証情報の取得）
       - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1  # デプロイ先のリージョン
