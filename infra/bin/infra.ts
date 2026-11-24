@@ -46,15 +46,19 @@ const props: InfraStackProps = {
   },
 }
 
-// アプリ用スタック
+// アプリ用スタック（常に生成する）
 new InfraStack(app, `InfraStack-${envConfig[envKey].envName}`, props);
 
 // GitHub Actions + OIDC 用スタック
-new GitHubOidcStack(app, 'GitHubOidcStack', {
-  env,
-  githubRepoSubjectPrefix: "<ユーザ名>@数値/<レポジトリ名>@数値",
-  roleNamePrefix: "<レポジトリ名>",
-});
+// OIDCスタックは環境変数 DEPLOY_OIDC=true のときだけ生成する
+// ローカルでは、DEPLOY_OIDC=true npx cdk deploy GitHubOidcStack で作る
+if (process.env.DEPLOY_OIDC === 'true') {
+  new GitHubOidcStack(app, 'GitHubOidcStack', {
+    env,
+    githubRepoSubjectPrefix: "<ユーザ名>@数値/<レポジトリ名>@数値",
+    roleNamePrefix: "<レポジトリ名>",
+  });
+}
 
 //new InfraStack(app, `InfraStack-${envConfig[envKey].envName}`, {
 /* If you don't specify 'env', this stack will be environment-agnostic.
