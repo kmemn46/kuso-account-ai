@@ -98,8 +98,8 @@ graph TB
 
     %% Bedrockへの接続
     Lambda1 -->|テキスト分類 / 仕訳| Bedrock
-    Furl2 -->|ナレーション生成ストリーム & 画像生成呼び出し| Bedrock
-    Furl3 -->|履歴を踏まえた対話| Bedrock
+    Furl2 -->|ナレーション生成ストリーム & 画像生成呼び出し| Bedrock 
+    Furl3 -->|履歴を踏まえた対話 ConverseStream + Guardrail| Bedrock
 ```
 
 ---
@@ -158,6 +158,10 @@ graph TB
 ### 🤖 生成AI基盤 (Amazon Bedrock)
 - **動的パラメータ管理（SSM Parameter Store）:**
   BedrockのモデルIDをインフラにハードコードせず、AWS Systems Manager Parameter Storeに集約。Lambda側でパラメータを**5分間キャッシュ**するロジックを組み込み、API呼び出しのオーバーヘッド削減とコスト最適化を両立。
+- **セキュリティ・ガバナンス（Amazon Bedrock Guardrails）:** 
+  アプリケーションコード側ではなくインフラ層（AWS CDK）で宣言的に入出力の安全性を担保しています。
+  - **多層的なコンテンツ保護:** 有害表現のフィルタリングに加え、プロンプトインジェクション（Prompt Attack）の検知・ブロックを設定。
+  - **機密情報（PII）の自動保護:** メールアドレスや電話番号の自動匿名化（マスキング）、クレジットカード番号やAWSアクセスキーの即時ブロックを実装。
 - **Text / Stream:** Anthropic Claude Haiku 4.5
 - **Image Generation:** Stability AI Stable Image Core v1.1 
 

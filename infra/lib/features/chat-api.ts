@@ -3,14 +3,15 @@ import * as apiGwV2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as apiGwV2Authorizers from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import * as apiGwV2Integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
-import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
-import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { Construct } from 'constructs';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
+import { BedrockGuardrailConstruct } from 'cdk-bedrock-guardrail';
+import { Construct } from 'constructs';
 import * as path from 'path';
 
 export interface ChatApiProps {
@@ -87,6 +88,11 @@ export class ChatApiConstruct extends Construct {
             projectionType: dynamodb.ProjectionType.ALL,
         });
 
+        // ==================================================
+        // Guardrail を作る
+        // ==================================================
+        const guardrail = new BedrockGuardrailConstruct(this, 'Guardrail', { envName });
+
         // ============================================================================
         // Lambda 作成: (Bedrock連携)
         // CDKが自動でTypeScriptをビルド＆バンドルしてくれます
@@ -123,6 +129,8 @@ export class ChatApiConstruct extends Construct {
                 CLIENT_ID: userPoolClientId,
                 FRONTEND_URL: frontendUrl,
                 BEDROCK_PARAMETER_NAME: modelIdParam.parameterName,
+                GUARDRAIL_ID: guardrail.guardrailId,
+                GUARDRAIL_VERSION: guardrail.guardrailVersion,
             },
         });
 
@@ -136,6 +144,7 @@ export class ChatApiConstruct extends Construct {
             ],
             resources: ['*'], // 本番環境では特定のモデルARNに絞るとより安全
         }));
+        guardrail.grantApply(chatLambda);
 
         // レスポンスストリーミング対応の関数URLを発行
         const functionUrl = chatLambda.addFunctionUrl({
