@@ -26,6 +26,9 @@ const docClient = DynamoDBDocumentClient.from(dynamoClient);   // DynamoDB ク�
 const BEDROCK_PARAMETER_NAME = process.env.BEDROCK_PARAMETER_NAME || '';
 const TABLE_NAME = process.env.TABLE_NAME || "";
 
+const guardrailIdentifier = process.env.GUARDRAIL_ID || "";
+const guardrailVersion = process.env.GUARDRAIL_VERSION || "";
+
 export const handler = awslambda.streamifyResponse(
     async (event: APIGatewayProxyEventV2, responseStream: NodeJS.WritableStream, context: Context) => {
 
@@ -140,11 +143,17 @@ export const handler = awslambda.streamifyResponse(
                 modelId: modelId,
                 messages: bedrockMessages,
                 // システムプロンプト（AIへの役割や指示）も共通の形式で指定可能
-                // system: [
-                //     {
-                //         text: "あなたは親切で分かりやすいプログラミング講師です。初心者の方にも丁寧な日本語で回答してください。",
-                //     },
-                // ],
+                system: [
+                    {
+                        text: "あなたは親切で簡潔に答えるAIアシスタントです。初心者の方にも丁寧な日本語で回答してください。",
+                    },
+                ],
+                // Guardrail を指定
+                guardrailConfig: {
+                    guardrailIdentifier,
+                    guardrailVersion,
+                    streamProcessingMode: 'sync',  // チャンクごとに厳密チェック
+                },
                 inferenceConfig: {
                     maxTokens: 1000,
                     temperature: 0.7,
@@ -162,6 +171,13 @@ export const handler = awslambda.streamifyResponse(
                         fullAssistantMessage += chunkText;
                         const seeData = `data: ${JSON.stringify({ text: chunkText })}\n\n`;
                         stream.write(seeData); // フロントエンドへリアルタイムに
+                    }
+
+                    // ガードレールが作動（ブロック）したときの検知
+                    // Guardrailがブロックすると stopReason が 'guardrail_intervened' になり、
+                    // 設定した blockedInputMessaging / blockedOutputsMessaging が text として流れてきます
+                    if (chunk.messageStop?.stopReason === 'guardrail_intervened') {
+                        console.warn('Guardrail intervened and blocked the content.');
                     }
                 }
             }
