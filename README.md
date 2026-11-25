@@ -153,6 +153,7 @@ graph TB
   - **Amazon API Gateway:** Cognito Authorizerを挟んだセキュアなCRUD用API。バースト対策としてスロットリング（流量制限）を設定し、予期せぬ負荷やAPI破産を防止。
 - **Authentication:** Amazon Cognito (User Pool / Client / API Gateway連携によるカスタム認可およびLambdaでのJWT検証)
 - **Database:** Amazon DynamoDB (会話履歴の永続化、インデックス最適化)
+- **CI/CD:** GitHub Actions（OIDC連携とIAM信頼ポリシー（subクレームによるリポジトリ・ブランチ制限）とcdk diff のPR自動コメントによる変更管理）
 
 ### 🤖 生成AI基盤 (Amazon Bedrock)
 - **動的パラメータ管理（SSM Parameter Store）:**
