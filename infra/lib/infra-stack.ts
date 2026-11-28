@@ -4,9 +4,12 @@ import { S3CloudFrontConstruct } from 'cdk-s3-cloudfront';
 import { ServerlessAuthConstruct } from 'cdk-serverless-auth';
 import { Construct } from 'constructs';
 import * as path from 'path';
-import { PositiveApiConstruct } from './features/positive-api';
-import { HenshinApiConstruct } from './features/henshin-api';
+import { AsyncAgentWorkflowApiConstruct } from './features/async-agent-workflow-api';
+import { AsyncQueuePipelineConstruct } from './features/async-queue-pipeline-api';
 import { ChatApiConstruct } from './features/chat-api';
+import { HenshinApiConstruct } from './features/henshin-api';
+import { PositiveApiConstruct } from './features/positive-api';
+
 
 // bin側(大元)から受け取るプロパティの型定義
 export interface InfraStackProps extends cdk.StackProps {
@@ -89,6 +92,25 @@ export class InfraStack extends cdk.Stack {
       userPoolClientId: auth.userPoolClient.userPoolClientId,
     });
 
+    // アプリ4:AIワークフロー
+    // Step Function + Bedrock多段呼び出し (DynamoDBも新規作成)
+    const asyncWorkflow = new AsyncAgentWorkflowApiConstruct(this, `asyncWorkflow-${envName}`, {
+      envName: envName,
+      removalPolicy: removalPolicy,
+      bedrockModelId: bedrockModelId,
+    });
+
+    // 非同期パイプライン (API Gateway → SQS → EventBridge Pipes → Step Function)
+    new AsyncQueuePipelineConstruct(this, `asyncQueuePipeline-${envName}`, {
+      envName: envName,
+      removalPolicy: removalPolicy,
+      frontendUrl: frontendUrl,
+      httpApi: auth.httpApi,
+      jwtAuthorizer: auth.jwtAuthorizer,
+      stateMachine: asyncWorkflow.stateMachine,
+      jobTable: asyncWorkflow.jobTable,
+    });
+
 
     // ==========================================
     // 3. 出力設定
@@ -111,7 +133,7 @@ export class InfraStack extends cdk.Stack {
       description: `Cognito User Pool Client ID for ${envName} environment`,
     });
 
-    // アプリ1、3用
+    // // アプリ1、3、4用
     // Api Gatewayのエンドポイント
     new cdk.CfnOutput(this, 'HttpApiURL', {
       value: `${auth.httpApi.apiEndpoint}/${auth.stage.stageName}`,

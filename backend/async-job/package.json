@@ -1,0 +1,15 @@
+{
+  "name": "async-job-lambda",
+  "version": "1.0.0",
+  "description": "AsyncJob Lambda for fetching step function result from DynamoDB",
+  "main": "index.ts",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.133",
+    "@types/node": "^24.10.1",
+    "typescript": "^5"
+  }
+}

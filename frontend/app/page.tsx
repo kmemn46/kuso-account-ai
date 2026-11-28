@@ -33,6 +33,14 @@ const kusoApps: KusoApp[] = [
         emoji: '💬✨',
         path: '/apps/chat',
     },
+    {
+        id: 'app-4',
+        title: 'スマート執筆ツール',
+        description: 'AIリサーチャーとAIライターが、あなたの記事作成をフルサポートします。',
+        emoji: '✨🕵️‍♂️🖋️',
+        path: '/apps/async-agent',
+    },
+
 ];
 
 export default function ThemeParkHome() {

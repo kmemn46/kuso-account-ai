@@ -2,7 +2,7 @@
 
 現代のAIアプリケーションに必要なコンポーネント（Cognito認証、DynamoDB履歴永続化、Lambda関数URLによるストリーム配信、Amazon Bedrock連携）を共通化した、**コマンド一発で全自動デプロイ可能なAWS CDK（IaC）基盤**です。
 
-本リポジトリは、この強固な共通インフラの上に、アーキテクチャの異なる3つの実用・エンタメAIアプリケーションを疎結合に同居させた、プロダクション品質のマルチテナント型ポートフォリオです。
+本リポジトリは、この強固な共通インフラの上に、アーキテクチャの異なる4つの実用・エンタメAIアプリケーションを疎結合に同居させた、プロダクション品質のマルチテナント型ポートフォリオです。
 
 ---
 
@@ -27,6 +27,7 @@ graph TB
     classDef app1 fill:#e8f5e9,stroke:#c8e6c9,stroke-width:2px,color:#000;
     classDef app2 fill:#fff3e0,stroke:#ffe0b2,stroke-width:2px,color:#000;
     classDef app3 fill:#efebe9,stroke:#d7ccc8,stroke-width:2px,color:#000;
+    classDef app4 fill:#f3e5f5,stroke:#ce93d8,stroke-width:2px,color:#000;
     classDef external fill:#eceff1,stroke:#b0bec5,stroke-width:1px,stroke-dasharray: 5 5,color:#37474f;
 
     User([ユーザー / フロントエンド])
@@ -78,6 +79,22 @@ graph TB
         Lambda3_CRUD <-->|履歴一覧・削除等| DDB3
     end
 
+    %% -------------------------------------------------------
+    %% アプリStack 4
+    %% -------------------------------------------------------
+    subgraph App4Stack ["【アプリ4: 非同期AIエージェントStack】"]
+        SQS4[(SQS + DLQ: ジョブキュー)]:::app4
+        Pipes4[EventBridge Pipes]:::app4
+        SFN4[Step Functions: 調査→構成案チェーン]:::app4
+        DDB4[(DynamoDB: ジョブ結果保存)]:::app4
+        Lambda4_Get[Lambda: 結果取得用]:::app4
+
+        SQS4 -->|ポーリング起動| Pipes4
+        Pipes4 -->|FIRE_AND_FORGET| SFN4
+        SFN4 -->|DynamoPutItem 直接保存| DDB4
+        Lambda4_Get -->|ポーリング取得| DDB4
+    end
+
     %% 外部AIサービス
     subgraph ExternalAPI ["AWS 生成AIサービス"]
         Bedrock[Amazon Bedrock]:::external
@@ -95,18 +112,22 @@ graph TB
     User -->|APIリクエスト| APIGW
     APIGW -->|ルーティング| Lambda1
     APIGW -->|ルーティング| Lambda3_CRUD
+    APIGW -->|Direct Integration POST| SQS4
+    APIGW -->|ルーティング GET| Lambda4_Get
 
     %% Bedrockへの接続
     Lambda1 -->|テキスト分類 / 仕訳| Bedrock
     Furl2 -->|ナレーション生成ストリーム & 画像生成呼び出し| Bedrock 
     Furl3 -->|履歴を踏まえた対話 ConverseStream + Guardrail| Bedrock
+    SFN4 -->|多段推論 InvokeModel 直接呼び出し| Bedrock
+
 ```
 
 ---
 
 ## 🛠️ 搭載アプリケーション（ユースケース）
 
-本基盤の上で、現在以下の3つの独立したアプリケーションが同時に稼働しています。
+本基盤の上で、現在以下の4つの独立したアプリケーションが同時に稼働しています。
 
 ### 1. 愚痴自動仕訳アプリ（API Gateway ➔ Lambda）
 - **概要:** ユーザーの不満や課題入力をAIが自動でポジティブな勘定科目と金額に変換・可視化するアプリケーション。
@@ -138,6 +159,16 @@ graph TB
 
     </details>
 
+### 4. 非同期AIエージェント（API Gateway ➔ SQS ➔ EventBridge Pipes ➔ Step Functions ＋ DynamoDB）
+- **概要:** AIリサーチャーとAIライターが、記事作成をフルサポート。
+- **技術的見どころ:** 長時間処理やマルチステップの推論（調査 → 構成案作成など）に対応するため、同期チャット基盤とは別に完全サーバーレスの非同期ワークフローを構築。
+    <details>
+    <summary>実際の動作の様子を見る（クリックで展開）</summary>
+
+    ![App Demo](./docs/app4-demo.gif) 
+
+    </details>
+
 ---
 
 ## 💎 主要な技術スタック & 運用のこだわり
@@ -154,6 +185,11 @@ graph TB
 - **Authentication:** Amazon Cognito (User Pool / Client / API Gateway連携によるカスタム認可およびLambdaでのJWT検証)
 - **Database:** Amazon DynamoDB (会話履歴の永続化、インデックス最適化)
 - **CI/CD:** GitHub Actions（OIDC連携とIAM信頼ポリシー（subクレームによるリポジトリ・ブランチ制限）とcdk diff のPR自動コメントによる変更管理）
+- **非同期 AI ワークフロー:**
+  - **Functionless 設計によるコスト・レイテンシ最適化:** リクエスト受付（API Gateway → SQS）、キュー連携（EventBridge Pipes → Step Functions）、AI呼び出し、DB保存（`DynamoPutItem`）まで一切 Lambda を介さない直接統合を採用し、コールドスタートと不要なコンピュート課金を排除。
+  - **耐障害性と流量制御:** SQS の可視性タイムアウトとデッドレターキュー（DLQ：`maxReceiveCount: 3`）によるメッセージ保護に加え、Step Functions 側で Bedrock のスロットリングエラーに対する指数バックオフリトライを実装。
+  - **プロンプトチェーンによる精度向上:** 1回の推論に詰め込まず「調査（リサーチャー）」と「構成案作成（ライター）」にタスクを分割し、`resultSelector` / `resultPath` でコンテキストをバトンパスすることで出力品質を向上。
+
 
 ### 🤖 生成AI基盤 (Amazon Bedrock)
 - **動的パラメータ管理（SSM Parameter Store）:**
